@@ -1,0 +1,229 @@
+export let metadata = {
+  title: '/js/react',
+  description:
+    '',
+};
+
+# 1. Destructing Assignment
+
+## Array Destructing
+
+```js
+const array = [1, 2, 3, 4, 5];
+const [first, second, third, ...arrayRest] = array;
+console.log(first); // 1
+// spread operator arrayRest
+console.log(arrayRest) // [4,5];
+```
+
+```js
+const array = [1, 2];
+const [a = 10, b = 10, c = 10] = array;
+console.log(a); // 1
+console.log(b); // 2
+console.log(c); // 10
+```
+
+```js
+// default value assigned for undefined only
+const [a = 1, b = 1, c = 1, d = 1, e = 1] = [undefined, null, 0, ''];
+console.log(a); // 1
+console.log(b); // null
+console.log(c); // 0
+console.log(d); // ''
+console.log(e); // 1
+```
+
+## Object Destructing
+
+```js
+const object = {
+  a:1, b:2, c:3, d:4, e:5
+};
+
+const {a, b, c, ...objectRest } = object;
+console.log(a); // 1
+console.log(objectRest); // {d:4, e:5}
+```
+
+```js
+const object = {
+  a:1, b:2
+};
+
+const { a: first, b: second } = object;
+console.log(first); // 1
+console.log(second); // 2
+```
+
+```js
+const object = {
+  a:1, b:2
+};
+
+const { a = 1, b = 10, c = 10} = object;
+console.log(a); // 1
+console.log(b); // 2
+console.log(c); // 10
+```
+
+```js
+function SampleComponent({a, b}) {
+  return a + b;
+}
+
+console.log(SampleComponent({a: 3, b: 5})); // 8
+```
+
+```js
+const key = 'a';
+const object = { a: 1, b: 1 };
+const { [key]: a } = object;
+console.log(a); // 1
+// const { [key] } = object // Uncaught Syntax Error: Unexpected token '[
+```
+
+```js
+const object = {
+  a:1, b:1, c:1, d:1, e:1
+};
+
+const {...rest, a, b} = object; // Rest element must be last element
+```
+
+
+# 2. Spread Syntax
+
+## Array Spread Syntax
+
+```js
+const arr1 = ['a', 'b'];
+const arr2 = [...arr1, 'c', 'd', 'e'];
+console.log(arr2); // ['a', 'b', 'c', 'd', 'e']
+
+const arr3 = arr1;
+console.log(arr3 === arr1); // true. copy reference
+
+const arr4 = [...arr1];
+console.log(arr4 === arr1); // false. copy value
+```
+
+## Object Spread Syntax
+
+```js
+const obj1 = { a:1, b: 2, };
+const obj2 = { c: 3, d: 4 };
+
+const newObj = { ...obj1, ...obj2 };
+console.log(newObj); // { a: 1, b: 2, c: 3, d: 4 }
+```
+
+```js
+const obj = { a: 1, b: 1, c: 1, d: 1, e: 1};
+const aObj = { ...obj, c: 10 };
+console.log(aObj); // { a: 1, b: 1, c: 10, d: 1, e: 1 }
+const bObj = { c: 10, ...obj };
+console.log(bObj); // { c: 1, a: 1, b: 1, d: 1, e: 1 }
+```
+
+## Object Shorthand Assignment
+
+```js
+const a = 1;
+const b = 2;
+const obj = { a, b };
+console.log(obj); // { a: 1, b: 1 }
+```
+
+
+# 3. Array.prototype Method
+
+## Array.prototype.map
+
+```js
+const arr = [1, 2, 3, 4, 5];
+const doubledArr = arr.map((item) => item * 2);
+console.log(doubledArr); // [2, 4, 6, 8, 10]
+```
+
+```js
+// @noexec
+const arr = [1, 2, 3, 4, 5];
+const Elements = arr.map((item) => {
+  return <p key={item}>{item}</p>
+});
+```
+
+## Array.prototype.filter
+
+```js
+const arr = [1, 2, 3, 4, 5];
+const evenArr = arr.filter((item) => item % 2 === 0);
+console.log(evenArr); // [2, 4]
+```
+
+## Array.prototype.reduce
+
+```js
+const arr = [1, 2, 3, 4, 5];
+const sum = arr.reduce((result, item) => {
+  return result + item;
+}, 0);
+console.log(sum);
+```
+
+## Array.prototype.forEach
+
+
+```js
+const arr = [1, 2, 3];
+arr.forEach((item) => console.log(item)); // 1, 2, 3
+```
+
+✅ `forEach` has not return value.
+
+✅ Once `forEach` is executed, it cannot be stopped unless an error is thrown or the process is terminated.
+
+```js
+function run() {
+  const arr = [1, 2, 3];
+  arr.forEach((item) => {
+    console.log(item);
+    if (item === 1) {
+      console.log('finished!');
+      return
+    }
+  });
+}
+run();
+```
+
+# 4. Conditional (ternary) Operator
+
+
+```js
+const value = 10;
+const result = value % 2 === 0 ? 'even' : 'odd';
+console.log(result); // even
+```
+
+```js
+// return only even numbers multiplied by 100
+const arr = [1, 2, 3, 4, 5];
+const result1 = arr.filter((item) => item % 2 === 0).map((item) => item * 100);
+console.log(result1);
+const result2 = arr.reduce((result, item) => {
+  if (item % 2 === 0) result.push(item * 100);
+  return result;
+}, []);
+console.log(result2);
+```
+
+✅ It is best to avoid using it in a nested manner whenever possible.
+
+```js
+// @noexec
+const value = useMemo(
+  () => (condition1 ? '1' : condition2 ? '2' : condition3 ? '3' : 'else'),
+  [condition1, condition2, condition3]);
+```

@@ -1,0 +1,475 @@
+import ImageViewer from '@/components/ImageViewer';
+
+
+export let metadata = {
+  title: '/dsa/structure',
+  description:
+    '',
+};
+
+
+# Array & List
+
+
+## Array
+
+An array is a data structure where values are stored in contiguous memory locations, allowing direct access to elements using an index. However, arrays have fixed sizes, and inserting or deleting elements can be inefficient as it requires shifting surrounding elements.
+
+1. **Direct Access**: Arrays allow direct access to values using an index, with a time complexity of O(1).
+2. **Fixed Size**: The size of an array is specified when it is declared, and it cannot be changed afterward.
+3. **Inefficient Insertion and Deletion**: Inserting or deleting elements in the middle of an array requires shifting the surrounding elements, resulting in a time complexity of O(n).
+4. **Single Data Type**: Arrays can only store values of the declared data type.
+5. **Simple Structure**: Due to their simple memory structure, arrays are commonly used in coding tests and algorithm problems.
+
+<ImageViewer src='/diagram/diagram_array.png'/>
+
+## List
+
+A list is a data structure where nodes, which are a combination of values and pointers, are connected by pointers.
+
+- **No Index**: Since there are no indexes, accessing a value requires sequential access starting from the head pointer. This makes accessing values slower.
+- **Fast Insertion and Deletion**: Due to being connected by pointers, operations like inserting or deleting data are faster.
+- **No Fixed Size**: The size of a list doesn't need to be specified when declared. Lists are well-suited for handling data that needs to change in size frequently.
+- **More Complex Structure**: Since space is needed to store pointers, the structure of a list is more complex compared to an array. 
+
+<ImageViewer src='/diagram/diagram_list.png' />
+
+
+## Q1. Add Digits
+
+Given a string `digits`, without spaces, return the sum of the digits.
+
+```js
+// @ts
+const addDigits = (digits: string): number => {
+  const nlist = digits.split('');
+  return nlist.reduce((acc, cur) => Number(acc) + Number(cur), 0);
+}
+
+console.log(addDigits('1'));
+console.log(addDigits('54321'));
+```
+
+## Q2. Special Average
+
+Given an integer array `scores`, return the average of scores calculated following rules:
+1. Let `M` = `max(scores)`
+2. Convert all score to `(score / M) * 100`
+
+```js
+// @ts
+const getSpecialAverage = (scores: number[]): number => {
+  const maxScore = Math.max(...scores);
+  const newScores = scores.map((score) => score / maxScore * 100);
+  return newScores.reduce((acc, cur) => acc + cur, 0)/scores.length;
+}
+
+console.log(getSpecialAverage([70, 80, 90]));
+console.log(getSpecialAverage([2, 3, 4]));
+```
+
+# 2. Range Sum
+
+A prefix sum array can be thought of as an array that preprocesses the data of the original list. By precomputing the prefix sum array, the time complexity for calculating the sum of a certain range within the original list decreases from `O(n)` to `O(1)`. If you calculate the sum of the list from `A[i]` to `A[j]` without using a prefix sum array, the time complexity is `O(n)`. However, by using a prefix sum array, you can obtain the answer in `O(1)`.
+
+```js
+// @noexec
+// prefix sum
+S[i] = A[0] + A[1] + A[2] + ... + A[i-1] + A[i]
+     = S[i-1] + A[i]
+```
+
+<ImageViewer src='/diagram/diagram_rangeSum.png' />
+
+```js
+// @noexec
+// range sum
+S[j] - S[i-1]
+
+// range(2,5) sum
+S[5] = A[0] + A[1] + A[2] + A[3] + A[4] + A[5]
+S[1] = A[0] + A[1]
+S[5] - S[2] = A[2] + A[3] + A[4] + A[5]
+```
+
+## Q3. Range Sum
+
+Given an integer array `numbers`, and two integers, `i` and `j` (1 < `i` < `j`), return the sum of numbers from index `i` to index `j`.
+
+```js
+// @ts
+const rangeSum1 = (numbers: number[], i: number, j: number): number => {
+  const prefixSum = numbers.reduce((acc, cur) => [...acc, acc[acc.length-1]+cur], [0])
+  return prefixSum[j]-prefixSum[i-1];
+}
+
+console.log(rangeSum1([1,2,10,4,5], 2, 3));
+console.log(rangeSum1([1,2,10,4,5], 1, 4));
+```
+
+
+## Q4. Range Sum 2
+
+```js
+// @ts
+const rangeSum2 = (numbers: number[][], x1: number, y1: number, x2: number, y2: number): number => {
+  const N = numbers.length;
+  let D = new Map();
+  
+  for (let i = 0; i < N+1; i ++) {
+    D.set(i, new Array(N+1).fill(0));
+  }
+
+  for (let i = 1; i < N+1; i++) {
+    const row = D.get(i);
+    for (let j = 1; j < N+1; j++) {
+      row[j] = D.get(i)[j-1] + D.get(i-1)[j] - D.get(i-1)[j-1] + numbers[i-1][j-1];
+      D.set(i, row);
+    }
+  }
+  
+  return D.get(y2)[x2] - D.get(y2)[x1-1] - D.get(y1-1)[x2] + D.get(y1-1)[x1-1];
+}
+
+const numbers = [
+  [1, 2, 3, 4],
+  [2, 3, 4, 5],
+  [3, 4, 5, 6],
+  [4, 5, 6, 7],
+];
+console.log(rangeSum2(numbers, 2, 2, 3, 4));
+console.log(rangeSum2(numbers, 3, 4, 3, 4));
+console.log(rangeSum2(numbers, 1, 1, 4, 4));
+```
+
+## Q5. Remainder Sum
+
+Given an integer array `numbers` (0 \<= `numbers[i]` \<= 109, 1 \<= `i` \<= 106), and an integer `m` (2 \<= `m` \<= 103), return the number of ranges where range sum equals `m`.
+
+```js
+// @ts
+const remainderSum = (numbers: number[], m: number): number => {
+  const prefixSum = numbers.reduce((acc, cur) => [...acc, acc[acc.length-1]+cur], [0]);
+  let ret = 0;
+  let countList = new Array(prefixSum.length).fill(0);
+
+  for (let i = 1; i < prefixSum.length; i++) {
+    const remainder = prefixSum[i] % m;
+    if (remainder == 0) ret++;
+    countList[remainder] += 1;
+  }
+
+  for (let i = 0; i < countList.length; i++) {
+    if (countList[i] > 1) {
+      ret += Math.floor(countList[i] * (countList[i]-1) / 2);
+    }
+  }
+  
+  console.log(prefixSum);
+  console.log(countList);
+  return ret;
+}
+
+console.log(remainderSum([1, 2, 3, 1, 2], 3));
+```
+
+# 3. Two Pointers
+
+## Q6. Consecutive Sum
+
+Given an integer `n` (1 \<= `n` \<= 10{<sup>6</sup>}), return the number of ways to represent `n` as the sum of consecutive natural numbers.
+
+```js
+// @ts
+// O(n)
+const consecutiveSum = (n: number): number => {
+  let start = 1;
+  let end = 1;
+  let sum = 1;
+
+  while (end !== n) {
+    if (sum === n) {
+      break;
+    } else if (sum > n) {
+      sum -= start;
+      start++;
+    } else {
+      end++;
+      sum += end;
+    }
+  }
+  console.log(`${start} + ... + ${end} = ${end-start+1}`);
+  return end-start+1;
+}
+
+consecutiveSum(15);
+consecutiveSum(7);
+consecutiveSum(35);
+```
+
+## Q7. Make Armor
+
+Each `material` for making armor has a unique number, and armor is made using two materials. If the sum of the unique numbers of the two materials equals `M`, armor can be made.
+
+Given an integer array `materials` (1 \<= `materials.length` \<= 15,000) and an integer `M` (1 \<= `M` \<= 10<sup>7</sup>), return the number of armors that can be made using the `materials`.
+
+```js
+// @ts
+// O(n log n)
+
+const makeArmor = (materials: string[], M: number): number => {
+  const sortedMaterials = materials.sort();
+
+  let start = 0;
+  let end = materials.length-1;
+  let count = 0;
+
+  while (start < end ) {
+    if (materials[start] + materials[end] > M) {
+      end--;
+    } else if (materials[start] + materials[end] < M) {
+      start++;
+    } else {
+      console.log(`pair ${count}: ${materials[start]}, ${materials[end]}`)
+      start++;
+      end--;
+      count++;
+    }
+  }
+
+  return count;
+}
+
+console.log(makeArmor(9, [2, 7, 4, 1, 5, 3])); // 2
+```
+
+## Q8. Good Number
+
+A number is called 'good number' if it can be represented as the sum of two different numbers from the same list.
+
+Given an integer array `numbers`, return the number of 'good numbers'.
+```js
+// @ts
+// O(n log n)
+
+const goodNumber = (numbers: number[]): number => {
+ 
+  const isGoodNumber = (n: number): boolean => {
+    const sortedNumbers = numbers.sort().filter((num) => num != n);
+    let start = 0;
+    let end = sortedNumbers.length-1;
+    while (start < end) {
+      if (sortedNumbers[start] + sortedNumbers[end] > n) {
+        end--;
+      } else if (sortedNumbers[start] + sortedNumbers[end] < n) {
+        start++;
+      } else {
+        console.log(`${sortedNumbers[start]} + ${sortedNumbers[end]} = ${n}`);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  let count = 0;
+  for (let i = 0; i < numbers.length; i++) {
+    if (isGoodNumber(numbers[i])) count++;
+  }
+
+  return count;
+}
+
+console.log(goodNumber([1,2,3,4,5,6,7,8,9,10])); // 8
+```
+
+# 4. Sliding Window
+
+The sliding window algorithm designates a range using two pointers and then solves the problem by moving while maintaining that range.
+
+## Q9. DNA Password
+
+A DNA string is a string in which all the characters are `{A, C, G, T}`. You want to create an arbitrary DNA string and use a substring of the created DNA string as a password. The number of occurrences of each character in the substring must meet or exceed a certain count. 
+
+Given an arbitrary DNA string `S`, the length of the substring to be used as a password `n` (1 \<= `n` \< `S.length` \<= 10<sup>5</sup>), and the minimum number of times each of `{A, C, G, T}` must appear for it to be used as a password `constraint`, find the number of possible passwords that can be created.
+
+```js
+// @ts
+// O(n);
+
+const DNAPassword = (S: string, n: number, constraint: nubmer[]): number => {
+  let passwords = [];
+  for (let i = 0; i <= S.length-n; i++) {
+    const password = S.substring(i, i+n);
+    const condition = 
+      (password.match(/A/g) || []).length >= constraint[0] &&
+      (password.match(/C/g) || []).length >= constraint[1] &&
+      (password.match(/G/g) || []).length >= constraint[2] &&
+      (password.match(/T/g) || []).length >= constraint[3];
+    if (condition && !passwords.includes(password)) {
+      passwords.push(password);
+    }
+  }
+  console.log(`password: [${passwords}]`);
+  return passwords.length;
+}
+
+console.log(DNAPassword('CCTGGATTG', 8, [2, 0, 1, 1])); // 0
+console.log(DNAPassword('GATA', 2, [1, 0, 0, 1])); // 2
+```
+
+## Q10. Find Minimum
+
+You are given an integer `L`, and an integer array `A`, return an integer array `D` where D<sub>i</sub> is the minimum value from A<sub>i-L+1</sub> to A<sub>j</sub>.
+
+```js
+// @ts
+// O(n)
+
+const findMinimum = (L: number, A: number[]): number[] => {
+  let D = [];
+  let ret = [];
+  for (let i = 0; i < A.length; i++) {
+    while (D.length && D[D.length-1][0] > A[i]) D.pop();
+    D.push([A[i], i])
+    if (D[0][1] <= i-L) D.shift();
+    ret.push(D[0][0])
+  }
+  return ret;
+}
+
+console.log(findMinimum(3, [1, 5, 2, 3, 6, 2, 3, 7, 3, 5, 2, 6]));
+// 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 2, 2
+```
+
+# 5. Stack & Queue
+
+A **stack** and a **queue** are both abstract data structures used to store and manage collections of elements, but they operate in different ways:
+
+## Stack
+- **LIFO (Last In, First Out)**: A stack follows the LIFO principle, where the last element added is the first one to be removed.
+- **Operations**:
+  - **Push**: Adds an element to the top of the stack.
+  - **Pop**: Removes the top element from the stack.
+  - **Peek/Top**: Retrieves the top element without removing it.
+- **Usage**: Stacks are often used in scenarios where you need to reverse items, backtrack, or maintain a history, such as in undo functionality, parsing expressions, or managing function calls (call stack).
+
+## Queue
+- **FIFO (First In, First Out)**: A queue follows the FIFO principle, where the first element added is the first one to be removed.
+- **Operations**:
+  - **Enqueue**: Adds an element to the end (rear) of the queue.
+  - **Dequeue**: Removes the element from the front of the queue.
+  - **Front/Peek**: Retrieves the front element without removing it.
+- **Usage**: Queues are used in scenarios where you need to maintain the order of elements, such as in scheduling tasks, managing requests in servers, breadth-first search in graphs, or implementing waiting lines.
+
+## Q11. Sequence
+
+You can create a sequence by storing the numbers from 1 to n in a stack. Assume that the push operation on the stack must follow an ascending order. 
+
+Given an integer array `numbers`, a squence, return a string array of push and pop operations performed to create the sequence.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+
+```js
+// @ts
+const createSequence = (numbers: number[]): string[] | string => {
+  let cur = 1;
+  let stack = [];
+  let ret = [];
+  for (let n of numbers) {
+      while (cur <= n) {
+          ret.push(`+ ${cur}`);
+          stack.push(cur);
+          cur++;
+      }
+      
+      const top = stack.pop();
+      if (top !== n) {
+          return 'NO'
+      }
+      ret.push(`- ${top}`);
+  }
+  return ret;
+}
+
+console.log(createSequence([4,3,6,8,7,5,2,1]));
+console.log(createSequence([1, 2, 5, 3, 4]));
+```
+
+## Q12. Next Greater element
+
+Find the next greate element(NGE) for each element in s sequence. NGE for `a` is the first number to the right of `a` that is greater than `a`. If there is no such number, NGE is -1.
+
+```js
+// @ts
+
+const findNGE = (numbers: number[]): number[] => {
+  let ret = new Array(numbers.length).fill(-1);
+  let stack = [];
+
+  for (let i = 0; i < numbers.length; i++) {
+      while (stack.length && numbers[stack[stack.length-1]] < numbers[i]) {
+          ret[stack.pop()] = numbers[i];
+      }
+      
+      stack.push(i);
+  }
+  return ret;
+}
+
+console.log(findNGE([3, 5, 2, 7])); // 5 7 7 -1
+console.log(findNGE([9, 5, 4, 8])); // -1 8 8 1
+```
+
+## Q13. Card Game
+
+There are `N` cards, each numbered from 1 to `N` in order, with card 1 on the top and card `N` on the bottom. The following actions are repeated until only one card remains:
+
+1. Discard the top card onto the floor.
+2. Move the new top card to the bottom of the deck.
+
+Given an integer `N`, return a value of the last remaining card.
+
+```js
+// @ts
+const lastCard = (N: number): number => {
+  let queue = Array.from({length: N}, (_, i) => i + 1);
+  while (queue.length > 1) {
+    queue.shift();
+    queue.push(queue.shift());
+  }
+  return queue[0];
+}
+
+console.log(lastCard(6)); // 4
+console.log(lastCard(9)); // 2
+```
+
+## Q14. Absolute Heap
+
+An absolute value heap is a data structure that supports the following operations:
+
+1. Insert an integer `x` into the array (`x != 0`).
+2. Print and remove the value with the smallest absolute value from the array. If there are multiple values with the smallest absolute value, print and remove the smallest among them.
+
+Start with an initially empty array. Implement the absolute value heap.
+
+```js
+// @ts
+const absoluteHeap = (numbers: number[]): void => {
+  const absSort = (a, b) => {
+    if (Math.abs(a) == Math.abs(b)) return a-b;
+    else Math.abs(a) - Math.abs(b);
+  }
+  let priorityQueue = [];
+
+  for (let i = 0; i < numbers.length; i++) {
+    if (numbers[i] == 0) {
+      if (priorityQueue.length) console.log(priorityQueue.shift());
+      else console.log(0);
+    } else {
+      priorityQueue.push(numbers[i]);
+      priorityQueue.sort(absSort);
+    }
+  }
+}
+
+absoluteHeap([1, -1, 0, 0, 0, 1, 1, -1, -1, 2, -2, 0, 0, 0, 0, 0, 0, 0])
+```

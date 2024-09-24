@@ -1,0 +1,287 @@
+
+export let metadata = {
+  title: '/js/datatype',
+  description:
+    'Different types in JS, how they are stored and compared.',
+};
+
+
+# 1. Primitive Types
+
+## undefined
+A declared but unassigned value.
+
+```js
+let foo;
+console.log(typeof foo === 'undefined');
+const bar = (hello) => {
+  return hello;
+};
+
+const type = typeof bar() === 'undefined'
+console.log(type);
+```
+
+## null
+The value that explicitly indicates emptiness.
+
+```js
+const type = typeof null === 'object'
+console.log(type);
+```
+
+## boolean
+In addition to boolean values like `true` and `false`, there are also truthy and falsy values that are treated like true and false in conditional statements.
+
+| Value | Type | Note |
+| ----- | ---- | ---- |
+| `false` | `Boolean`|  |
+| `0,-0,0n,0x0n` | `Number`, `BigInt` | 0 is falsy value regardless of its sign or decimal point |
+| `NaN` | `Number`| `NaN` meaning 'Not a Number' is always falsy value |
+| ```'', "", `` ``` | `Number`|  |
+| `null` | `null`| `null` is always a falsy value. |
+| `undefined` | `undefined`| `undefined` is always a falsy value. |
+
+
+```js
+// @noexec
+Boolean(1) // true
+Boolean(0) // false
+Boolean(NaN) // false
+Boolean(null) // false
+Boolean(undefined) // false
+```
+
+✅ **truthy**: A value treated as `true` within a conditional statement: All values except those mentioned above as falsy are treated as true. Note that objects and arrays are treated as truthy regardless of whether they contain values. Thus, both `true` are truthy values.
+
+## Number
+Unlike other languages that store integers and floating-point numbers separately, JavaScript stored all numbers in a single type. According to the ECMAScript standard, it could store values between -(2<sup>53</sup>-1) and (2<sup>53</sup>-1). Before the introduction of `BigInt`, it was difficult to handle values outside this range.
+
+```js
+const a = 1;
+const maxInteger = Math.pow(2,53);
+console.log(maxInteger-1 === Number.MAX_SAFE_INTEGER); // true
+const minInteger = -(Math.pow(2,53) - 1);
+console.log(minInteger === Number.MIN_SAFE_INTEGER); // true
+```
+
+Additionally, since separate data types for binary, octal, and hexadecimal numbers are not provided, values expressed in these bases are all interpreted as decimal and displayed as the same value.
+
+```js
+const binary_2 = 0b10; // binary value 2
+binary_2 == (2).toString(2); // (2) is in bracket since 2. will be treated as decimal
+
+const octal_8 = 0c10 // octal value 8
+octal_8 == (8).toString(8); // true
+
+10 == (10).toString(10); // true
+
+const hexadecimal_16 = 0x10 // hexadecimal value 16
+hexadecimal_16 == (16).toString(16); //true
+```
+
+## BigInt
+
+```js
+const number = 9007199254740992;
+console.log(number === 9007199254740993); // last digits are not the same, but returns true
+const bigInt1 = 9007199254740992n; // 'n' at the end OR
+const bitInt2 = BigInt('9007199254740992'); // use BigInt function
+
+console.log(number == bigInt1); // true
+console.log(number === bigInt1); // false, b/c different types
+```
+
+## String
+`string` is used to store text-type data. They can be represented by a pair of single quotes('), double quotes("), or backticks(\`), which allow embedded
+expressions.
+
+`string` represented with backticks, called template literals, differ slightly from those with single or double quotes. Template literals return the same string but allow for new lines and embedded expressions within the string.
+
+```js
+// @noexec
+// '\nhello world!\n'
+const s = `
+hello world!
+` ;
+
+// Uncaught SyntaxError: Invalid or unexpected token
+const s = "
+hello world!
+";
+```
+
+_`string` is a primitive type which means once a string is created, cannot be changed._
+
+```js
+const foo = 'bar';
+console.log(foo[0]); // 'b'
+foo[0] = 'a';
+console.log(foo) // 'bar'
+```
+
+## Symbol
+`Symbol` is created to represent unique values that are not duplicated. Symbols can only be created using the `Symbol()` function.
+
+```js
+const key1 = Symbol('key');
+const key2 = Symbol('key');
+console.log(key1 === key2) // false
+console.log(Symbol.for('hello') === Symbol.for('hello')); // true
+```
+
+
+# 2. Object Type
+
+Aside from the seven primitive types, everything else, that is, most types in JavaScript, is an object type. This includes arrays, functions, regular expressions, classes, and more.
+
+_Object types are also referred to as reference types because they involve passing references._
+
+```js
+console.log(typeof [] === 'object'); // true
+function hello() {}
+console.log(typeof hello === 'function'); // true
+const hello1 = function () {}
+const hello2 = function () {}
+console.log(hello1 === hello2); // hello1 and hello2 looks the same, but have different reference
+```
+
+
+# 3. Data Storage
+Primitive types are stored as immutable values. These values occupy a memory space and are stored at the time of variable assignment.
+
+In contrast, objects can be modified by deleting, adding, or changing properties, so they are stored in a mutable form unlike primitive values. When copying values, a reference is passed instead of the value itself.
+
+```js
+let hello1 = 'hello world';
+let hi1 = 'hello world';
+console.log(hello1 === hi1); // true
+
+let hello2 = { greet: 'hello world' };
+let hi2 = { greet: 'hello world' };
+console.log(hello2 === hi2); // false
+console.log(hello2.greet === hi2.greet); // true
+
+// hello3 and hi3 have different references, but reference of value (greet) are the same
+let hello3 = { greet: 'hello world' };
+let hi3 = hello3;
+hi3.greet = 'something';
+console.log(hello3.greet); // 'something'
+```
+
+
+# 4. Object.is
+
+- `== vs. Object.is`: The == comparison operator performs type casting before comparing values, meaning it converts both sides to the same type before making the comparison. Therefore, `5 == '5'` would return true after type coercion if the values are considered equal. However, `Object.is` does not perform such type casting; it works similarly to ===, returning `false` if the types are different.
+- `=== vs. Object.is`:
+```js
+// @noexec
+-0 === +0; // true
+Object.is(-0,+0); // false
+
+Number.NaN === NaN; // false
+Object.is(Number.NaN, NaN); // true
+
+NaN == 0 / 0; // false
+Object.is(NaN, 0 / 0); // true
+```
+
+
+# 5. Data Comparison in React
+
+## Object.is
+React compares the new value against the old value for equality using the `Object.is()` comparison algorithm. `Object.is()` is a feature provided by ES6, React uses Polyfill to implement it.
+
+```js
+// @noexec
+function is (x: any, y: any) {
+  return (
+    (x === y && (x !== 0 || 1 / x === 1 / y )) || (x !== x && y !== y)
+  )
+};
+
+const objectIs: (x: any, y: any) => boolean =
+  typeof Object.is === 'function' ? Object.is : is;
+export default objectIs;
+```
+
+## Shallow Equal
+
+React compares the new value against the old value for equality using the `Object.is()` comparison algorithm. `Object.is()` is a feature provided by ES6, React uses Polyfill to implement it. In React, a function called `shallowEqual` is created based on `Object.is` to perform equality comparisons. This `shallowEqual` function is used in various places where equality comparison is needed, such as dependency comparisons. It first performs a comparison using `Object.is`, and then performs a shallow comparison between objects, which `Object.is` cannot do. Shallow comparison between objects means comparing only the values at the first level of depth in the objects.
+
+```js
+// @react
+// Object.is cannot compare objects with different reference
+Object.is({ hello: 'world' }, { hello: 'world' }); // false
+
+// shallowEqual in React can compare the values of 1 depth in the objects
+shallowEqual({ hello: 'world' }, { hello: 'world' }); // true
+
+// values of 2 depth cannot be compared
+shallowEqual({ hello: { hi: 'world' } }, { hello: { hi: 'world' } }); // false
+```
+
+The reason for implementing only shallow comparison of objects is that JSX props used in React are objects, and it is sufficient to compare only these props at the first level. React performs rendering based on the values taken from props, so shallow comparison is generally sufficient for typical cases. Understanding this, one can see that passing another object as a prop may cause React rendering to behave unexpectedly.
+
+```js
+// @react
+import { memo, useEffect, useState } from 'react'
+
+type Props = {
+  counter: number
+};
+
+const Component = memo((props: Props) => {
+  useEffect(() => {
+  console.log('Component has been rendered');
+});
+
+  return <h1>{props.counter}</h1>;
+});
+
+type DeeperProps = {
+  counter: {
+    counter: number
+  }
+};
+
+const DeeperComponent = memo((props: DeeperProps) => {
+  useEffect(() => {
+    console.log('DeeperComponent has been rendered!');
+  });
+
+  return <h1>{props.counter.counter}</h1>;
+})
+
+export default function App() {
+  const [, setCounter] = useState(0)
+
+  function handleClick() {
+    setCounter((prev) => prev + 1)
+  }
+  return (
+    <div className='App'>
+      <Component counter = {100} />
+      <DeeperComponent counter = {{ counter: 100 }} />
+      <button onClick={handleClick}>+</button>
+    </div>
+  )
+}
+```
+
+If there is another object inside an object, `React.memo` cannot return the memoized component even if there are no actual changes in the component. When the parent component, `App`, triggers a forced re-render by clicking a button, the `Component` function using `shallowEqual` accurately performs the object comparison according to the logic and prevents rendering. However, the `DeeperComponent` function fails to compare correctly, and `React.memo` does not work as intended. If recursion is used to perfectly compare the objects inside, it would negatively impact performance since there is no way to know how many nested objects there might be.
+
+
+
+# 6. Conclusion
+The incompleteness of object comparison in JavaScript is a feature not seen in other functional languages, and it is something that JavaScript developers must remember. In React’s functional programming model, which is based on JavaScript, this limitation cannot be overcome, so comparisons are performed using only shallow comparison to implement necessary functionality.
+
+Understanding this characteristic of JavaScript will help you easily grasp the considerations needed for properly operating hooks' dependency arrays in functional components, the necessity of ` useMemo`and `useCallback` beyond rendering prevention, and the correct functioning of `React.memo` for rendering optimization.
+
+
+
+
+
+
+
+

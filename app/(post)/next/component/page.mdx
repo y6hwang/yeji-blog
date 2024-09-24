@@ -1,0 +1,351 @@
+export let metadata = {
+  title: '/next/component',
+  description:
+    '',
+};
+
+
+
+# 1. React Server Component
+
+React Server Components introduced in React 18 are distinct from server-side rendering. Although both terms include "server," they represent entirely different concepts. The key difference is that while both involve performing operations on the server, React Server Components focus on rendering components on the server without sending JavaScript to the client, whereas server-side rendering involves generating HTML on the server and sending it to the client, typically with JavaScript for client-side interactions.
+
+## Traditional React Components & Limitations of SSR
+
+React components traditionally operate on the client side, with JavaScript code execution occurring in the browser. When visiting a page built with React, the browser downloads the necessary React code, constructs the React component tree, and then renders it to the DOM. In the case of server-side rendering (SSR), the server generates the initial HTML for the DOM, which is then sent to the client. On the client side, this pre-rendered DOM is used as the basis for hydration. After hydration, the browser tracks the component state, attaches event handlers to the DOM, and may update the rendering tree in response to user interactions and other changes.
+
+The traditional structure of React applications presents several notable limitations:
+
+- **JavaScript Bundle Size**: It's not possible to create components with a JavaScript bundle size of zero. For example, libraries like `sanitize-html`, used to sanitize user-generated HTML, require significant bundle sizes (e.g., 63.6kB). Clients need to download and execute these libraries in the browser, increasing the client's burden. If such libraries were executed on the server and only the sanitized results were sent to the client, the client wouldn't need to download or run these libraries, reducing client-side overhead.
+
+- **Direct Backend Resource Access**: React applications typically use methods like REST APIs to access backend data, necessitating constant provision of data access methods on the backend. If clients could access backend resources directly, such as databases or file systems, it would reduce the effort required to provide data to clients and streamline data retrieval processes.
+
+- **Code Splitting Limitations**: Code splitting is a technique to improve app initialization speed by dividing large code bundles into smaller, dynamically loaded chunks. In React, this is often implemented using `lazy`. However, this method has drawbacks, such as the need to wrap components in `lazy` manually, potential for missed code splitting, and performance issues if components are not loaded until they are needed. Automatic code splitting on the server could optimize performance without requiring developers to manage splitting manually.
+
+- **Handling Client-Server Request Chains**: When rendering a component triggers additional requests for nested components, the initial component's request and rendering must complete before nested components can be processed. This leads to increased server requests and potential delays. If all data fetching and component rendering were handled on the server, it would minimize client-server request delays and reduce redundant client-side operations, resulting in more efficient rendering.
+
+- **Increased Abstraction Costs**: React is not a template language but allows for extensive abstraction using JavaScript functions and classes. While this provides flexibility, it can lead to increased code complexity and runtime overhead. Performing complex abstractions and calculations on the server means that clients receive precomputed results, reducing client-side computation and improving performance. The complexity of the abstractions is managed on the server, resulting in simpler and lighter client-side results.
+
+
+
+## Server Component
+
+React Server Components allow for rendering on both the server and the client using the same language, framework, and API. Some components are rendered on the client, while others are rendered on the server.
+
+✅ Client components cannot import server components.
+
+```js
+// @react
+// ClientComponent.jsx
+'use clinet';
+// ❌ client component cannot import server component
+import ServerComponent from './ServerComponent.server';
+export default function ClientComponent() {
+  return (
+    <div>
+      <ServerComponent />
+    </div>
+  );
+};
+
+// ClientComponent.jsx
+'use client';
+export default function ClientComponent({ children }) {
+  return (
+    <div>
+      <h1>Client Component</h1>
+      {children}
+    </div>
+  );
+};
+
+// ServerComponent.jsx
+export default function ServerComponent() {
+  return <span>Server Component</span>;
+}
+
+// ParentServerComponent.jsx
+// This component can be a server component, or client component.
+// Therefore, can be used in both.
+import ClientComponent from './ClientComponent';
+import ServerComponent from './ServerComponent';
+export default function ParentServerComponent() {
+  return (
+    <ClientComponent>
+      <ServerComponent />
+    </ClientComponent>
+  );
+};
+```
+
+Summary of the different types of React components and their constraints based on the React Server Components model:
+
+1. **Server Components**:
+> - Single Execution: They run only once on the server per request, so they cannot hold state. Hooks like `useState` and `useReducer` are not available.
+> - No Lifecycle Hooks: They cannot use lifecycle hooks such as `useEffect` or `useLayoutEffect` because they do not have a concept of mounting and unmounting.
+> - No Custom Hooks with Effects/State: Custom hooks relying on state or effects cannot be used. However, custom hooks that do not depend on these and are suitable for server-only use can be used.
+> - No Browser APIs: They do not have access to browser-specific APIs like DOM manipulation or `window`, `document` objects.
+> - Server-Side Data Access: They can access server-side resources like databases, internal services, or file systems asynchronously using `async/await`. Components themselves can be asynchronous.
+> - Rendering: They can render other server components, basic HTML elements (`div`, `span`, `p`), and client components.
+
+2. **Client Components**:
+> - Browser Execution: They run exclusively in the browser, so they cannot import server components or server-only hooks/utilities.
+> - Nested Structure: Server components can render client components, but a client component cannot have server components as its children. Client components receive the server-rendered tree as a fully formed structure to display.
+> - Typical React Behavior: They can use state, effects, and browser APIs, making them similar to the standard React components known before Server Components.
+
+3. **Shared Components**:
+> - Dual Usage: These components can be used in both server and client contexts. They must adhere to the constraints of both server and client components.
+
+React defaults to treating components as shared unless otherwise specified. Adding `'use client';` at the top of a file explicitly marks it as a client component, ensuring React handles it accordingly. If a client component tries to import a server component, it will trigger a build error, helping maintain the separation between client and server logic.
+
+```js
+// @react
+// Component.js
+import OtherClientComponent from './OtherClientComponent';
+
+function ClientComponent() {
+  const [state, setState] = useState(false);
+  return <OtherClientComponent onClick={() => setState(true)} value = {state} />
+}
+```
+
+## Difference Between Server-Side Rendering and Server Components
+
+Server components and server-side rendering (SSR) are fundamentally different concepts. SSR involves rendering the entire page into HTML on the server and then sending this HTML to the client. After receiving the HTML, the client performs a hydration process, checking the server's output and attaching events. The primary goal of SSR is to quickly deliver static HTML initially, though it still incurs the cost of downloading, parsing, and executing JavaScript on the client after the initial HTML load.
+
+In contrast, server components allow for rendering parts of a page on the server, which can then be sent to the client. The client receives this pre-rendered content and can still benefit from client-side interactivity and dynamic updates. By using server components, the client gets a faster initial HTML load, and only the necessary JavaScript is sent to handle interactivity, thus reducing the burden on the browser.
+
+Ultimately, server-side rendering and server components should be viewed not as alternatives but as complementary strategies. Combining both can offer faster initial rendering and a more efficient experience, reducing the amount of JavaScript the client needs to process.
+
+
+
+## How Server Components Work
+
+1. **Server Receives Render Request**:
+The process starts when the server receives a render request. Since server components are used, the initial rendering must occur on the server. This means that the root component is always a server component. For example, if you have a page that uses server components, it starts on the server.
+
+2. **Server Serializes Components**:
+The server serializes the components into JSON based on the request. It will serialize the parts that can be rendered on the server and leave placeholders for any client components. The server's response includes a wire format with the following types:
+> - **M**: Lines starting with "M" indicate client components. These lines reference the chunk where the client-side bundle containing the necessary information for rendering is located.
+> - **S**: Suspense boundaries.
+> - **J**: Serialized data for server-rendered components, including all necessary elements, classNames, props, and children information.
+
+> The server aims to send as much information as possible in an economical format, which is then streamed to the client.
+
+3. **Browser Reconstructs React Component Tree**:
+Upon receiving the JSON data from the server, the browser parses this data to reconstruct the React component tree. If the data includes client components (e.g., M1), the browser will handle the rendering of these client components. For server-rendered components, the browser uses the provided information to build the React tree and commit the final result to the DOM.
+
+Special Characteristics of How React Server Components Operate:
+
+- **Streaming Data to the Client**: The server sends information to the client in a streaming format, allowing the client to read JSON line-by-line and render components incrementally. This approach helps in displaying results to users as quickly as possible.
+- **Separate Bundling of Components**: Components are not bundled together into a single large bundle but are instead individually bundled. This allows for components to be received and rendered on demand, and to be loaded separately if needed.
+- **JSON Instead of HTML**: Unlike server-side rendering (SSR), where the server sends fully-rendered HTML, server components send data in JSON format. The client’s goal is to efficiently assemble the React component tree using both server and client components, which requires more than just rendering HTML. By receiving a JSON representation of the component structure, React can quickly construct and render the component tree.
+
+Constraints Due to These Characteristics:
+- When passing props from server components to client components, the data must be serializable. This is because the server components serialize the data into JSON, and the client components need to deserialize this data to use it.
+
+
+
+# 2. Next.js Server Component
+
+In Next.js, the `page.js` and `layout.js` files are considered server components by default. They handle the rendering of pages and layouts on the server side, and they need to follow the constraints of server components, such as not being able to import client components directly.
+
+## The introduction of a new `fetch`
+
+In the `/app` directory, `getServerSideProps`, `getStaticProps`, and `getInitialProps` have been removed. Instead, all data fetching is now done using the standard web API `fetch`.
+
+```js
+// @react
+async function getData() {
+  const result = await fetch('https://api.example.com/');
+
+  if (!resul.ok) {
+    // throw error to the nearest error boundary
+    throw new Error('Fetch Data Failure');
+  }
+
+  return result.json;
+};
+
+// async server component page
+export default async function Page() {
+  const data = await getData();
+
+  return (
+    <main>
+      <Children data={data} />
+    </main>
+  )
+};
+```
+
+Now, it is possible to fetch data directly from the server, and components can operate asynchronously. Server components will wait until the data is fetched before rendering the page and sending it to the client.
+
+Additionally, this fetch API has been extended to prevent redundant requests within the same server component tree. Similar to SWR and React Query, the server caches the data for a fetch request until rendering is complete. On the client side, unless otherwise instructed or requested, the data is cached as much as possible to prevent duplicate requests.
+
+
+## Static & Dynamic Rendering
+
+In the past, Next.js used `getStaticProps` to create static pages when the data fetched from the server didn't change. This feature allowed for faster data delivery by caching the results in a CDN, ensuring that every request to the same URL returned the same content, outperforming traditional server-side rendering.
+
+In Next.js 13, static routing is now rendered at build time and cached for reuse by default. For dynamic routing, components are rendered on the server with each request.
+
+```js
+// @react
+async function fetchData() {
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts');
+  const data = await res.json();
+
+  return data;
+};
+
+export default async function Page() {
+  const data: Array<any> = await fetchData();
+
+  return (
+    <ul>
+      {data.map((item, key) => (
+        <li key={key}>{item.id}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+This example demonstrates a server component that fetches data from a specific API endpoint and renders it on the page. Since the URL is statically determined, a request is made to the endpoint during the build process, fetching the data and including the rendered result in the build.
+
+However, there's also a method that doesn't involve statically caching the URL.
+
+```js
+// @react
+async function fetchData() {
+  const res = await fetch(
+    `https://jsonplaceholder.typicode.com/posts`,
+    // no-cache option
+    { cache: 'no-cache' },
+    // same option from Node.js
+    // { next: { revalidate: 0 } },
+  );
+  const data = await res.json();
+  return data;
+};
+
+export default async function Page() {
+  const data: Array<any> = await fetchData();
+
+  return (
+    <ul>
+      {data.map((item,key) => (
+        <li key={key}>{item.id}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+If you declare in the `fetch` call that the data should not be cached, Next.js will not pre-build and store the request. Instead, it will perform the `fetch` request and render the component each time a request is made.
+
+Additionally, if functions like `next/headers` or `next.cookie`, which fetch header or cookie information provided by Next.js, are used within the component, Next.js will recognize the component as dynamic and exclude it from static rendering.
+
+For dynamic URLs that you still want to cache for specific addresses (similar to `getStaticPaths`), you can use a new function called `generateStaticParams`.
+
+```js
+// @react
+export async function generateStaticParams() {
+  return [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
+};
+
+async function fetchData(params: { id: string }) {
+  const res = await fetch(
+    `https://jsonplaceholder.typicode.com/posts/${params.id}`,
+  );
+  const data = await res.josn();
+  return data;
+};
+
+export default async function Page({
+  params,
+} : {
+  params: { id: string },
+  children?: ReactNode
+}) {
+  const data = await fetchData(params);
+
+  return (
+    <div>
+      <h1>{data.title}</h1>
+    </div>
+  );
+};
+```
+
+To summarize the behavior based on fetch options:
+
+- `fetch(URL, { cache: 'force-cache' })`: This is the default option and works similarly to `getStaticProps`, caching the fetched data and managing it with that cached data.
+- `fetch(URL, { cache: 'no-cache' })` or `fetch(URL, { next: { revalidate: 0 } })`: This works like `getServerSideProps`, not caching the data and fetching new data on each request.
+- `fetch(URL, { next: { revalidate: 10 } })`: This is similar to adding `revalidate` to `getStaticProps`, caching the data for a specified duration and invalidating the cache after this duration has passed.
+
+
+## Caching, Mutating, and Revalidating
+
+Next.js redefines the default behavior of fetch by offering `{ next: { revalidate?: number | false } }`, allowing you to set the validity period for the fetched data. Once this period elapses, the data is refetched, and the page is re-rendered. This can also be set at the page level by declaring a `revalidate` variable.
+
+If you set `revalidate = 60` at the root, all nested routes will be updated and re-rendered at 60-second intervals. This option can also be provided within the fetch call. The caching and revalidation process works as follows:
+
+1. **Initial Request:** The first request to the route shows pre-cached static data.
+2. **Cache Duration:** This cached initial request is maintained for the duration specified by `revalidate`.
+3. **Post-Expiry Display:** Once the revalidate period expires, the cached data is still shown.
+4. **Background Fetching:** While showing the cached data, Next.js refetches the data in the background after the revalidate period has passed.
+5. **Cache Update:** If the refetch is successful, the cached data is updated. If not, the old data is retained.
+
+To invalidate the cache and refresh the data globally, use the `router.refresh();` method added to the router. This method refreshes the data from the server without affecting the browser history, React state, or requiring a full browser refresh.
+
+
+
+
+## Incremental Page Loading Using Streaming
+
+Server-side rendering (SSR) has the limitation that it cannot display anything to the user until the entire requested page is rendered and sent. During this time, the user sees a blank page. Even after receiving the complete page, it remains static and non-interactive until the React hydration process completes. The issue is that the user has to wait for all these steps to be sequentially completed to fully see and interact with the page.
+
+To address this, streaming was introduced. Instead of waiting for the entire page to be ready, the HTML is split into smaller chunks and progressively sent to the client as they become ready. This way, components that load first can be displayed to the user immediately. This means the user can interact with parts of the page sooner, improving key web metrics like Time to First Byte (TTFB) and First Contentful Paint (FCP).
+
+There are two ways to utilize this streaming approach:
+
+1. **Place `loading.tsx` in the Route:**
+The `loading` component is a reserved component that can be placed to show a placeholder before the rendering completes. When a `loading` file is placed, a `Suspense` component is automatically used as follows:
+
+```js
+// @react
+<Layout>
+  <Header />
+  <SideNav />
+  <!-- loading -->
+  <Suspense fallback={<Loading />}>
+    <page />
+  </Suspense>
+</Layout>
+```
+
+2. **Use `Suspense`:**
+For more granular control, you can directly use React's `Suspense`.
+
+```js
+// @react
+import { Suspense } from 'react';
+import { Notes, Peoples } from './Components';
+
+export default function Posts() {
+  return (
+    <section>
+      <Suspense fallback={<Skeleton />}>
+        <Notes />
+      </Suspense>
+      <Suspense fallback={<Skeleton />}>
+        <People />
+      </Suspense>
+    </section>
+  )
+}
+```
+
+Since the `loading` component in Next.js is based on `Suspense`, directly using `Suspense` provides the same benefits. By leveraging streaming and server rendering, components that finish loading are hydrated in order, allowing users to interact with the page as quickly as possible.

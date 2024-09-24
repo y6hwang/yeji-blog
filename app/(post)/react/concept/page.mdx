@@ -1,0 +1,781 @@
+export let metadata = {
+  title: '/react/concept',
+  description:
+    '',
+};
+
+
+# 1. JSX
+
+## JSXElement
+
+To be a `JSXElement`, it must be one of the following types:
+- `JSXOpeningElement`: This is the commonly seen element. If it starts with a `JSXOpeningElement`, it must have a corresponding `JSXClosingElement` at the same level to be considered valid JSX syntax. &#8227; eg. `<JSXElement JSXAttributes(optional)>`
+- `JSXClosingElement`: This indicates the end of a `JSXOpeningElement` and must be used in conjunction with a `JSXOpeningElement`. &#8227; eg. `</JSXElement>`
+- `JSXSelfClosingElement`: This element starts and closes itself, similar to `<script/>`. It cannot contain any children internally. &#8227; eg. `<JSXElement JSXAttributes(optional)> />`
+- `JSXFragment`: This is an empty element that cannot take the form of a JSXSelfClosingElement. It cannot be `</>`, but `<></>` is valid. &#8227; eg. `<>JSXChildren(optional)</>`
+
+✅ When creating custom components in addition to using HTML syntax, the component names must start with an uppercase letter. This is necessary to distinguish between HTML tag names and user-defined component names in React.
+
+
+## JSXElementName
+
+`JSXElementName` refers to what can be used as an element name in a `JSXElementName`. The possible names are as follows:
+- `JSXIdentifier`: A valid identifier that can be used within JSX. It cannot start with a number or any special character other than $ and _.
+```js
+// @react
+function valid1() {
+  return <$></$>
+}
+
+function valid2() {
+  return <_></_>
+}
+
+// Invalid
+function invalid() {
+  return <1></1>
+}
+```
+
+- `JSXNamespacedName`: A combination of `JSXIdentifier:JSXIdentifier`. Joining different identifiers with a colon(:) is considered a single identifier. Only one colon can be used, and more than one is not considered a valid identifier.
+```js
+// @react
+function valid() {
+  return <foo:bar></foo:bar>
+}
+
+// Invalid
+function invalid() {
+  return <foo:bar:baz></foo:bar:baz>
+}
+```
+
+- `JSXMemberExpression`: A combination of `JSXIdentifier.JSXIdentifier`. That is, joining different identifiers with a dot(.) is considered a single identifier. Unlike `JSXNamespacedName`, multiple dots can be used. However, it cannot be used in conjunction with `JSXNamespacedName`.
+```js
+// @react
+function valid1() {
+  return <foo.bar></foo.bar>
+}
+
+function valid2() {
+  return <foo.bar.baz></foo.bar:baz>
+}
+
+// Invalid
+function invalid() {
+  return <foo:bar.baz></foo:bar.baz>
+}
+```
+
+
+## JSXAttributes
+
+`JSXAttributes` refers to attributes that can be assigned to a `JSXElement`. They are not mandatory in all cases and their absence will not cause an error:
+
+- `JSXSpreadAttributes`: It functions the same as the JavaScript spread operator.
+
+> &#8227; `{...AssignmentExpression}`: The `AssignmentExpression` can be not only a simple object but also any expression that is considered an `AssignmentExpression` in JavaScript. This includes conditional expressions, arrow functions, assignment expressions, and more.
+
+- `JSXAttribute`: Expressed as a key-value pair representing an attribute. The key is called `JSXAttributeName`, and the value is called JSXAttributeValue.
+
+> &#8227; `JSXAttributeName`: The key of the attribute. Both `JSXIdentifier` and `JSXNamespacedName` can be used as keys. Likewise, a colon : can be used to denote the key.
+
+> &#8227; `JSXAttributeValue`: The value that can be assigned to the attribute key, which must satisfy one of the following conditions.
+> > 1. Strings in Double or Single Quotes: This is the same as JavaScript strings. The string can be empty as well.
+> > 2. `{ AssignmentExpression }`: This refers to a JavaScript `AssignmentExpression`. An `AssignmentExpression` is used for assigning values in JavaScript, and any expression that can assign a value to a variable is also valid as a JSX attribute value.
+> > 3. `JSXElement`: Another JSX element can be used as the value.
+> > 4. `JSXFragment`: A JSX fragment, which does not have additional attributes, can be used as the value.
+
+
+## JSXChildren
+
+`JSXChild`: The basic units that make up `JSXChildren`.
+
+1. `JSCText`: Strings excluding &#123;, &#60;, &#63;, and &#125;. These are represented as strings to avoid confusion with other JSX syntax.
+```js
+// @react
+function valid() {
+  return <>{'{} <>'}</>
+}
+```
+2. `JSXElement`
+3. `JSXFragment`
+4. `{ JSXChildExpression (optional) }`: The `JSXChildExpression` refers to a JavaScript `AssignmentExpression`.
+```js
+// @react
+export default function App() {
+  return <>{(() => 'foo')()}</>
+}
+```
+
+
+## JSXStrings
+
+All strings that are valid in HTML are also valid in `JSXStrings`. This includes strings defined by double quotes, single quotes, and `JSText`.
+
+One significant difference from JavaScript is the handling of escape characters that start with a backslash (`\`). In JavaScript, the backslash is used to handle special characters, and it has certain restrictions (e.g., to represent a backslash itself, you need to escape it as `\`). However, in HTML, there are no such restrictions, and the backslash can be used without any limitations.
+
+
+### JSX Examples
+
+```js
+// @react
+// single element
+const ComponentA = <A>Hello</A>
+
+// SelfClosingTag with no child
+const ComponentB = <A />
+
+// option by {} or spread operator
+const ComponentC = <A {...{ required: true }} />
+
+// attribute only
+const ComponentD = <A required />
+
+// attribute and its value
+const ComponentE = <A required={false} />
+
+const ComponentF = (
+  <A>
+    <B text="react" />
+  </A>
+)
+
+const componentG = (
+  <A>
+    <B optionalChildren={<>Hello.</>} />
+  </A>
+)
+
+const constComponentH = (
+  <A>
+    Hello
+    <B text="react" />
+  </A>
+)
+```
+
+```js
+// @react
+// ❌
+function TextOrHeading1({
+  isHeading,
+  children,
+}: PropsWithChildren<{ isHeading: boolean }>) {
+  return isHeading ? (
+    <h1 className='text'>{children}</h1>
+  ): (
+    <span className='text'>{children}</span>
+  )
+}
+
+// ✅
+import { createElement } from 'react';
+
+function TextOrHeading1({
+  isHeading,
+  children,
+}: PropsWithChildren<{ isHeading: boolean }>) {
+  return createElement(
+    isHeading ? 'h1' : 'span',
+    { className: 'text' },
+    children,
+  )
+}
+
+```
+
+
+
+# 2. Virtual DOM & React Fiber
+
+## DOM and Browser Rendering Process
+
+✅ DOM(Document Object Model): an interface for web pages that contains information on how the browser should display the content and structure of a web page.
+
+Here's a step-by-step explanation of how the browser processes and renders a web page:
+1. `Request and Download`: The browser visits the URL requested by the user and downloads the HTML file.
+2. `Parsing HTML`: The browser's rendering engine parses the HTML to create a tree of DOM nodes (DOM).
+3. `Download CSS`: During the parsing process in **2**, if CSS files are encountered, these files are also downloaded.
+4. `Parsing CSS`: The browser's rendering engine parses the CSS files to create a tree of CSS nodes (CSSOM).
+5. `DOM Traversal`: The browser traverses the DOM nodes created in **2**. It does not visit every node, but only those visible to the user, meaning nodes with `display: none` or similar properties are skipped. This is to speed up the tree analysis process.
+6. `Applying CSS`: For the visible nodes identified in **5**, the browser searches for corresponding CSSOM information and applies the discovered CSS styles to these nodes. The process of applying CSS to DOM nodes involves two main steps:
+> - `Layout (Reflow)`: This process calculates the exact coordinates where each node should appear on the screen. After the layout phase, the nodes are ready for painting.
+> - `Painting`: This process involves drawing the actual visual representation of the nodes, such as colors and styles, based on the layout information.
+
+
+## Virtual DOM
+
+Rendering a web page is indeed a complex and costly process. Most applications don't just display information after rendering but also interact with users, which can cause further changes to the web page. Therefore, it's important to consider how the page will be updated in response to user interactions.
+
+When the color of a specific element changes, only painting is needed, which is relatively quick. However, if the visibility or size of an element changes, a layout recalculation occurs, which, in turn, requires painting, leading to higher costs. Additionally, if a DOM change affects an element with many child elements, the cost in terms of browser and user resources increases.
+
+To address these issues, the concept of the Virtual DOM was introduced. The Virtual DOM is a virtual representation of the real DOM managed by React. Instead of immediately updating the actual DOM, React first updates the Virtual DOM in memory. When React is ready, it then reflects the changes in the real DOM. This approach minimizes the number of actual DOM updates, reducing the rendering costs for both the browser and the developer.
+
+## React Fiber
+
+React Fiber is a regular JavaScript object managed by React. The Fiber Reconciler is responsible for managing it. It compares the Virtual DOM with the actual DOM, collects changes, and, if differences are found, requests rendering based on the Fiber that holds information about the changes.
+
+The goal of React Fiber is to address responsiveness issues in React web applications related to animations, layout, and user interactions. To achieve this, Fiber performs the following tasks:
+- **Breaking Down Tasks**: It divides work into smaller units and prioritizes them.
+- **Interruptible Work**: It allows tasks to be paused and resumed later.
+- **Reusing or Discarding Work**: It can reuse previously done work or discard unnecessary tasks.
+
+Fiber operates as a unit of work in React. React processes these units of work one at a time and completes them with a task called `finishedWork()`. After this, the work is committed, resulting in visible changes to the actual browser DOM.
+
+Here's how the process is broken down:
+1. **Render Phase**: During this phase, React performs all asynchronous tasks that are not visible to the user. Tasks such as prioritizing, pausing, or discarding work occur in this phase.
+2. **Commit Phase**: In this phase, the `commitWork()` function is executed to reflect actual changes in the DOM. Unlike the render phase, this phase is synchronous and cannot be interrupted. This ensures that the changes are applied directly to the browser DOM without interruption.
+
+Fiber can be thought of as being similar to React elements, but there is an important distinction: while React elements are created anew with each rendering, Fibers are designed to be reused whenever possible. Fibers are created when a component is first mounted, and they are ideally reused in subsequent updates. This reuse helps optimize performance by maintaining and updating the state and structure of the component efficiently.
+
+### React Fiber Tree
+
+In React, there are two types of fiber trees:
+1. **Current Fiber Tree**: This tree represents the current state of the UI.
+2. **Work-in-Progress Tree**: This tree represents the state of the UI while work is ongoing.
+
+When React Fiber completes its work, it updates the pointers to switch the `workInProgress` tree to become the`current` tree. This technique is known as **double buffering**. Here's a breakdown of how React Fiber manages rendering using the double buffering technique:
+1. **Updating and Building the Work-in-Progress Tree**: When an update occurs, Fiber starts building a new tree called the `workInProgress` tree using the new data from React. This process involves updating and preparing the new state of the UI.
+2. **Rendering the Work-in-Progress Tree**: Once the `workInProgress` tree has been fully built, it is used for the next rendering cycle. This allows React to apply the changes without affecting the current UI.
+3. **Switching Trees**: After the `workInProgress` tree has been finalized and all changes have been applied, it becomes the new current tree. The switch is done by updating pointers, which efficiently transitions the updated state into view.
+
+This method ensures smooth updates and minimal disruption to the user interface by separating the rendering of new updates from the display of the current state.
+
+The sequence of Fiber operations in React:
+1. **beginWork() Function**: React starts the Fiber work by executing the `beginWork()` function. This process traverses the tree until it reaches a Fiber node with no children.
+2. **completeWork() Function**: Once the work in step 1 is finished, React calls the `completeWork()` function to finalize the Fiber's work. 
+3. **Move to Sibling**: If the Fiber has siblings, React moves on to the next sibling. 
+4. **Return and Signal Completion**: After **2** and **3** are completed, React returns to the parent node and signals that the current node's work is complete.
+
+
+## Fiber and Virtual DOM
+
+As mentioned earlier, a Fiber holds a 1:1 correspondence with a React component, and this Fiber operates asynchronously within the React architecture. However, updating the actual DOM, the browser's structure, must occur synchronously. Because synchronous updates can lead to incomplete rendering, React performs these tasks in memory first, using the virtual DOM, and then applies the final results to the actual browser DOM.
+
+The virtual DOM is strictly a concept used in web applications. React Fiber, however, can be utilized in non-browser environments like React Native, which means Fiber and the virtual DOM are not the same concept. Despite different renderers for React and React Native, the reconciliation process managed by Fiber remains consistent. This allows for the same reconciler to be used across different environments.
+
+
+
+# 3. Components
+
+## Class Component
+```js
+// @react
+import React from 'react';
+// props type
+interface SampleProps {
+  required?: boolean;
+  string;
+}
+
+// state type
+interface SampleState {
+  number;
+  isLimited?: boolean;
+}
+
+class SampleComponent extends React.Component<SampleProps, SampleState> {
+  private constructor(props: SampleProps) {
+    super(props);
+    this.state = {
+      count: 0,
+      isLimited: false,
+  }
+}
+
+private handleClick = () => {
+  const newValue = this.state.count + 1;
+  this.setState({ count: newValue, isLimited: newValue >= 10});
+}
+
+public render() {
+  const {
+  props: { required, text };
+  state: { count, isLimited };
+  } = this
+
+      return (
+        <h2>
+          Sample Component
+          <div>{ required ? 'required' : 'not required' }</div>
+          <div>text: {text}</div>
+          <div>count: {count}</div>
+          <button onClick={this.handleClick} disabled={isLimited}>+</button>
+        </h2>
+      )
+  }
+}
+```
+
+- **constructor**: If the constructor function is present inside a component, it is called when the component is initialized. It can be used to initialize the component's state. The `super()` call within the constructor creates the component and first calls the constructor function of the parent component, `React.Component`, allowing access to the necessary parent component.
+- **props**: Similar to passing arguments to a function, props are used to pass specific attributes to a component. In the example given, the props are declared as `{ required?: boolean, text: string; }`, meaning the component should be called with `<SampleComponent text="hello" />`.
+- **state**: Values managed within a class component. The state must always be an object. Whenever this value changes, re-rendering occurs.
+- **method**: Functions used within the rendering function, typically associated with events occurring in the DOM. There are three main ways to create these methods:
+> 1. Binding in the constructor: If you create methods as regular functions, this may be undefined because this in regular functions binds to the global object (or undefined in strict mode). Thus, you need to forcefully bind this using bind in the constructor.
+> 2. Using arrow functions: Arrow functions determine this at the time of definition rather than a  runtime, inheriting this from the upper scope. This approach avoids the need for manual binding.
+> 3. Creating functions inside the render method: This involves creating a new function inside the render method to pass to the event handler. `eg. <button onClick={() => this.handleClick()}>+</button>`.
+> > This is discouraged because a new function is created and assigned on every render, making optimization difficult.
+
+### Lifecycle Methods of a Class Component
+
+The points in time when lifecycle methods are executed can be broadly divided into three phases:
+- **Mounting**: When the component is being mounted.
+- **Updating**: When the content of an already created component is being updated.
+- **Unmounting**: When the component is no longer present.
+
+## render()
+
+`render()` is one of the lifecycle methods and is the only mandatory method in a React class component. This function is used to render the UI of the component, and this rendering happens during both the mounting and updating phases.
+
+✅ `render()` must always be pure and free of side effects. Given the same input values (props or state), it should always return the same output. Therefore, you should not call `this.setState` inside the `render()` method, as it directly updates the `state`.
+
+
+## ComponentDidMount()
+
+`componentDidMount()` is executed immediately after a component is mounted and ready. Unlike `render()`, you can call `this.setState()` within this function to update the `state`. If `this.setState` is called, the `state` is changed and a re-render is attempted immediately. This operation occurs before the browser updates the UI, so the user will not notice the changes.
+
+✅ `componentDidMount()` is not a cure-all and can cause performance issues. Generally, it's better to handle state in the constructor. Using `this.setState` in `componentDidMount()` is for tasks that cannot be done in the constructor, such as updating state after an API call, or performing DOM-dependent operations like adding event listeners.
+
+
+## ComponentDidUpdate()
+
+`componentDidUpdate()` is executed immediately after a component update occurs. It is generally used to perform operations that require the DOM to be updated based on changes to state or props. You can also call `this.setState()` within this method. However, if it is not wrapped in an appropriate conditional statement, it can lead to continuous calls to `this.setState()`, which is highly inefficient and detrimental to performance.
+
+
+## ComponentWillUnmount()
+
+`componentWillUnmount()` is called just before a component is unmounted or is no longer in use. It is the ideal place to call cleanup functions to prevent memory leaks or unnecessary operations. It is useful for tasks such as removing event listeners, canceling API calls, or clearing timers created with setInterval or setTimeout.
+
+## shouldComponentUpdate()
+
+To prevent a React component from re-rendering due to changes in state or props, you can use the `shouldComponentUpdate()` lifecycle method. This method allows you to define conditions under which the component should not update, even when changes occur that would normally trigger a re-render.
+
+Generally, re-rendering a component due to state changes is natural, so `shouldComponentUpdate()` is typically used only in specific performance optimization scenarios.
+
+In class components, there are two types of components to consider: `Component` and `PureComponent`. The difference between them lies in their handling of `shouldComponentUpdate()`:
+1. **Component**: This is the default class component. It will re-render whenever there are changes to state or props.
+2. **PureComponent**: This component performs a shallow comparison of state and props to determine if a re-render is necessary. It will only re-render if the shallow comparison detects differences. This can be beneficial for performance in many cases, but it has limitations:
+> - Shallow Comparison: `PureComponent` only checks for changes in primitive values and references. It does not deeply compare complex data structures, such as objects or arrays. If a state or prop is an object and its internal structure changes without changing the reference, `PureComponent`' may not detect this change, leading to potential issues.
+> - Performance Impact: If a large number of components in the application are `PureComponent`/> instances, and shallow comparisons frequently fail (resulting in more re-renders), it can negatively impact performance. This is because the overhead of performing shallow comparisons can outweigh the benefits.
+
+## static getDerivedStateFromProps()
+
+`getDerivedStateFromProps()` was introduced to replace the deprecated `componentWillReceiveProps()`. It is called right before the `render()` method is executed. This allows it to update the state based on changes in props before rendering the component. It is a `static` method, which means it does not have access to `this` (i.e., the component instance). Instead, it only has access to the props and state directly. It should return an object to update the state based on the props. If `null` is returned, no changes are made to the state.
+
+✅ This method is called every time `render()` is about to be invoked, which includes updates and initial mounts.
+
+## getSnapshotBeforeUpdate()
+
+`getSnapshotBeforeUpdate()` is another recently introduced lifecycle method that can replace `componentWillUpdate()`. It is called right before the DOM is updated. The value returned from this method is passed to `componentDidUpdate()`. It is useful for handling tasks like adjusting window size or scroll positions before the DOM is rendered.
+
+
+## getDerivedStateFromError()
+
+`getDerivedStateFromError()` and the next method, `componentDidCatch()`, are not part of the normal lifecycle methods but are instead used for handling errors. These methods are not yet implemented as React Hooks, you must use class components to use them.
+
+`getDerivedStateFromError()` is called when an error occurs in a child component. This method allows you to implement appropriate error handling logic. `getDerivedStateFromError()` is a `static` method that takes `error` as an argument, where `error` represents the error that occurred in the child component.
+
+
+Since `getDerivedStateFromError()` is called during the rendering process, it must return a state object. This is necessary because the method is used to decide how to render the component when an error has occurred in a child component. It must return a state object that will be used to update the component's state. Additionally, because `getDerivedStateFromError()` is called during the rendering process, it should not produce side effects. Side effects include any operations other than returning a state value, such as error logging using `console.error`. For logging errors or performing other side effects, you should use `componentDidCatch()`.
+
+✅ Adding side effects to `getDerivedStateFromError()` will not cause errors directly, but since it is called during the render phase, introducing unnecessary side effects could interfere with the rendering process. Therefore, you should avoid adding side effects to `getDerivedStateFromError()`.
+
+
+## componentDidCatch()
+
+`componentDidCatch()` is executed when an error occurs in a child component, and it runs after `getDerivedStateFromError()` has caught the error and determined the state. `componentDidCatch()` receives error and info as arguments. The info argument contains information about which component caused the error.
+
+`componentDidCatch()` can perform side effects, unlike getDerivedStateFromError, which is called during the render phase and should not have side effects. Since `componentDidCatch()` is executed in the commit phase, it is suitable for tasks such as logging errors based on the information provided.
+
+Typically, `getDerivedStateFromError()` and `componentDidCatch()` are used to create error boundary components. However, they do not catch all errors. ErrorBoundary is often used at the root of an application, but it cannot catch errors outside its boundary. Multiple ErrorBoundary components can be declared to handle errors differently in various parts of the component tree. This approach helps prevent errors from affecting the entire application by isolating error handling to specific component tree areas.
+
+
+### Limitations of Class Component
+
+- Difficult to Track Data Flow: Tracking the flow of state is quite challenging. State updates can occur in various methods, and there is no enforced order in which methods are written, making it hard to follow. Even though lifecycle methods have a specific execution order, there is no requirement to follow this order in class components, which can lead to code that does not align with the lifecycle sequence. This makes it difficult to determine how state changes and whether rendering occurs or not.
+- Difficult to Reuse Application Logic: When there is duplicated logic between components and you want to reuse it, you might consider wrapping components in higher-order components or passing props. However, these approaches come with significant downsides. As the amount of shared logic increases, you risk falling into a "wrapper hell" with numerous higher-order components or props. As the application scales, managing reusable logic smoothly in a class-based environment becomes challenging. While you can manage duplicated code by extending classes like PureComponent, it increases complexity and makes it harder to follow the flow of code.
+- Component Size Increases with More Features: As components accumulate more logic and handle more complex data flows, especially with frequent use of lifecycle methods, the size of components can grow exponentially. This results in large and unwieldy components.
+- Classes are Relatively Harder than Functions: Due to JavaScript's prototype-based nature, classes are a relatively recent concept, and many JavaScript developers are more accustomed to functions. Additionally, classes in JavaScript are less common and more complex compared to functions. The peculiarities of JavaScript, such as how this behaves, can confuse newcomers and even experienced developers.
+- Difficult to optimize Code Size: Class components face challenges in optimizing bundle size. Method names are not minimized, and unused methods are not tree-shaken, meaning they remain in the bundle, increasing its size.
+- Less Favorable for Hot Reloading: **Hot reloading** is a technique that updates only the changed code without restarting the app, allowing for rapid changes. Class components create an instance upon the initial render, managing state within that instance. Modifying the render method of this instance requires creating a new instance, which will naturally reset the state. In contrast, function components use closures to store state, so when the function is re-executed, it retains and displays the state without resetting.
+
+
+## Function Component
+
+
+```js
+// @react
+import { useState } from 'react';
+
+type SampleProps = {
+  required?: string;
+  text: string;
+}
+
+export function SampleComponent({ required, text }: SampleProps) {
+  const [count, setCount] = useState<number>(0);
+  const [isLimited, setIsLimited] = useState<boolean>(false);
+  
+  function handleClick() {
+    const newValue = count + 1;
+    setCount(newValue);
+    setIsLimited(newValue >= 10);
+  }
+  
+  return (
+    <h2>
+      Sample Component
+      <div>{required ? 'required' : 'not required' }</div>
+      <div>text: {text}</div>
+      <button onClick={handleClick} disabled={isLimited}>+</button>
+    </h2>
+  );
+}
+```
+
+Compared to class components, function components are clearly more concise:
+- No Need for `this` binding: When declaring functions inside the `render` method, there's no need to worry about binding `this`. In function components, you can directly use functions without having to handle the binding complexities associated with class components.
+- State Management: State in function components is managed with the useState hook, which allows for primitive values and objects to be used easily. This approach is generally more straightforward compared to class components where state must always be an object.
+- Accessing props and state: In the return statement of a function component, you don't need to use this to access props and state. You can directly use them, which simplifies the code.
+
+
+## Function Component vs. Class Component
+
+1. ### Absence of Lifecycle Methods
+
+Function components do not have lifecycle methods that are present in class components. This is because function components are simply functions that accept props and return React elements, while class components are JavaScript classes that inherit from `React.Component` and implement a `render()` method. In other words, lifecycle methods come from `React.Component`, so unless you are using a class component, you cannot use lifecycle methods.
+
+On the other hand, function components can achieve similar behavior to `componentDidMount`, `componentDidUpdate`, and `componentWillUnmount` by using the `useEffect()` hook. It is important to note that `useEffect()` is not an exact replacement for lifecycle methods but rather provides a mechanism for creating side effects synchronously based on the component's state.
+
+2. ### Function Components and Rendered Values
+
+Function components fix the rendered values, whereas class components do not.
+
+```js
+// @react
+import React from 'react';
+
+interface Props {
+  string;
+}
+
+// function component
+export function FunctionalComponent(props: Props) {
+  const showMessage = () => {
+    alert('Hello ' + props.user)
+  }
+  
+  const handleClick = () => {
+    setTimeout(showMessage, 3000)
+  }
+  
+  return <button onClick={handleClick}>Follow</button>;
+}
+
+// class component
+export class ClassComponent extends React.Component<Props, {}> {
+  const showMessage = () => {
+    alert('Hello ' + this.props.user)
+  }
+  
+  const handleClick = () => {
+    setTimeout(this.showMessage, 3000)
+  }
+  
+  public render() {
+    return <button onClick={this.handleClick}>Follow</button>
+  }
+}
+```
+
+In this example, both `FunctionalComponent` and `ClassComponent` perform the same action: when `handleClick` is clicked, it shows an alert with the user from props after 3 seconds. If the props change within those 3 seconds, one might expect both codes to behave the same way, but they do not.
+
+In the case of `ClassComponent`, the message will be based on the updated props after 3 seconds, whereas `FunctionalComponent` will display the message based on the props at the time of the click. Why does this difference occur?
+
+A class component always retrieves the value of props from this. Although props in a class component are immutable from the outside, the object that this refers to, i.e., the component instance members, is mutable. As a result, React's lifecycle methods, including `render()`, can read the updated values. Therefore, if the parent component changes the props and triggers a re-render, it means that `this.props` has changed. Consequently, `showMessage` can read the new value of props.
+
+These are two main ways to address this issue:
+1. Call `this.props` earlier and pass it as arguments to functions: This approach solves the problem but can make the code more complex as the number of props and state to manage increases. Additionally, if `showMessage` depends on other methods, the complexity increases further.
+```js
+// @react
+export class ClassComponent extends React.Component<Props, {}> {
+  const showMessage = () => {
+    alert('Hello ' + this.props.user)
+  }
+
+  const handleClick = () => {
+    const {
+      props: { user }
+    } = this;
+    setTimeout(this.showMessage, 3000)
+  }
+
+  public render() {
+    return <button onClick={this.handleClick}>Follow</button>
+  }
+}
+```
+
+2. Provide necessary values within `render()`: By supplying all required values at the moment `render()` is executed, you can access the necessary values when needed. However, this approach is not performance-friendly because the function will be recreated and reassigned every time the component renders.
+```js
+// @react
+export class ClassComponent extends React.Component<Props, {}> {
+  public render() {
+    const showMessage = () => {
+      alert('Hello ' + this.props.user)
+    }
+
+    const handleClick = () => {
+      setTimeout(this.showMessage, 3000)
+    }
+
+    return <button onClick={this.handleClick}>Follow</button>
+  }
+}
+```
+
+Unlike class components that use props bound to `this`, functional components receive props as arguments. Since props are received as arguments and not bound to this, the component cannot modify these values and uses them as they are. This characteristic also applies to state.
+
+```js
+// @react
+export function FunctionalComponent(props: Props) {
+  const showMessage = () => {
+    alert('Hello ' + props.user)
+  }
+
+  const handleClick = () => {
+    setTimeout(showMessage, 3000)
+  }
+
+  return <button onClick={handleClick}>Follow</button>;
+}
+```
+
+Functional components render based on the current values of props and state at the time of rendering. If props or state changes, the function will be called again with the updated values. On the other hand, class components render based on this, which changes over time.
+
+
+
+# 4. Rendering
+
+**Rendering in a browser** refers to the process of drawing the necessary UI on a webpage based on HTML and CSS resources. As it involves drawing the information to be displayed to the user, the way rendering is performed can significantly impact performance.
+
+**Rendering in React** refers to the series of processes where all components within the React application tree calculate how to structure the UI based on their current props and state values and determine what DOM results to provide to the browser. If a component does not have state values like props and state, rendering occurs solely based on the JSX value that the component returns.
+
+✅ Do not confuse browser rendering with React rendering.
+
+## Reasons for rendering in React
+
+1. Initial Rendering: When a user first enters the application, a rendered output is needed. React performs the initial rendering to provide this information to the browser.
+
+2. Re-rendering: This refers to all renderings that occur after the initial rendering when the application is first entered:
+- When `setState()` is called in a class component.
+- When `forceUpdate()` is called in a class component: Rendering in class components is performed by the instance method `render()`. If this render relies on values other than props or state, which prevents automatic re-rendering, `forceUpdate()` can be called to trigger a re-render. When `forceUpdate()` is called, it is considered as a forced rendering declared by the developer, bypassing `shouldComponentUpdate()`. This applies to itself and all its child components. Using `forceUpdate()` within `render()` should be avoided to prevent infinite loops.
+- When the setter (second element of the array) returned by `useState()` is called in a function component.
+- When the dispatch (second element of the array) returned by `useReducer()` is called in a function component.
+-  When the key prop of a component changes: In React, key is a special prop that can be used by all components, even if not explicitly declared. Typically, key is used when declaring child components in an array (e.g., `arr.map()`).
+> ✅ The reason for needing keys in an array: In React, a key is a value that identifies a particular element among its sibling elements during re-rendering. When re-rendering occurs in a structure with multiple identical child components, it is necessary to distinguish which components have changed between the current tree and the work-in-progress tree. The key is the value used to identify whether a component is the same between these two trees. This differentiation is essential to minimize the number of components that need to be
+re-rendered.
+- When props change.
+- When the parent component renders.
+
+## Rendering Process of React
+
+When the rendering process begins, React traverses from the root component downwards, searching for all components marked as needing updates. If it encounters a component that needs updating, it executes the `render()` method for class components or calls the function itself for function components, then stores the result.
+
+Typically, the result of rendering is composed using JSX syntax, which compiles into JavaScript and transforms into a call to `React.createElement()`. This `createElement` function returns a plain JavaScript object that describes the structure of the UI for the browser.
+
+```js
+// @react
+function Hello {
+  return (
+    <TestComponent a={35} b='test'>
+      Hello
+    </TestComponent>
+  )
+}
+
+// The above JSX syntax is converted by calling React.createElement as follows:
+function Hello() {
+  return React.createElement(
+    TestComponent,
+    { a: 35, b: 'test'},
+    Hello
+  )
+}
+
+// result:
+{ TestComponent, props: { 35, b: 'test', children: 'Hello' } }
+```
+
+When the rendering process is executed, it goes through the steps of collecting the rendering results of each component. React then compares these results with the new tree, the virtual DOM, to gather all the changes needed to be reflected in the actual DOM. This calculation process is called **reconciliation**. Once this reconciliation process is complete, all changes are applied to the DOM in a single synchronous sequence, making the result visible.
+
+
+## Render and Commit
+
+- **Render Phase**: The render phase involves rendering components and calculating changes. This means executing components (via `render()` or `return`) in the rendering process, then comparing the result with the previous virtual DOM to identify which components need updates. The comparison focuses on type, props, and key. If any of these three have changed, the component is marked as needing an update.
+- **Commit Phase**: The commit phase involves applying the changes from the render phase to the actual DOM to make them visible to the user. The browser's rendering only occurs once this phase is completed.
+
+If React were to update the DOM in the commit phase first, it would then update internal references in React to point to all the newly created DOM nodes and instances. After that, for class components with lifecycle methods, `componentDidMount()` and `componentDidUpdate(`) would be called, and for function components, the `useLayoutEffect` hook would be executed.
+
+**React's rendering process does not always result in a DOM update.** Even if rendering occurs, the commit phase might be skipped if no changes are detected. In other words, if the rendering calculation finds no differences, the commit phase is omitted, and no DOM updates occur. This means React can perform rendering without any visible changes. If no changes are found in the first stage of rendering, the commit phase can be skipped, and no updates will be made to the browser's DOM.
+
+
+## Rendering Scenario
+
+```js
+// @react
+import { useState } from 'react';
+
+export default function A() {
+  return (
+    <div className='App'>
+      <h1>Hello React!</h1>
+      <B />
+    </div>
+  )
+}
+
+function B() {
+  const [counter, setCounter] = useState(0);
+  
+  function handleButtonClick() {
+    setCounter((prev) => prev + 1);
+  }
+  
+  return (
+     <>
+      <label>
+        <C number={counter} />
+      </label>
+      <button onClick={handleButtonClick()}>+</button>
+     </>
+  )
+}
+
+function C({ number }) {
+  return (
+    <div>
+      {number} <D />
+    </div>
+  )
+}
+
+function D() {
+  return <>React is fun!</>
+}
+```
+
+Assume a user clicks a button in `<B />` to update `counter`. Rendering occurs in the following sequence:
+1. `setState` is called on component B.
+2. B's re-rendering task is added to the rendering queue.
+3. React inspects the rendering path starting from the top of the React tree.
+4. Component A is not marked as needing re-rendering, so no action is taken for A.
+5. Component B, being marked as needing an update, is re-rendered.
+6. In this process, B returns component C.
+7. Component C's props have been updated, so it is marked as needing an update and is re-rendered.
+8. During this re-rendering, C returns component D.
+9. Although D is not marked as needing an update, since C was rendered, D is also rendered as its child.
+
+Rendering a component affects all its child components unless measures are taken to prevent it. If a parent component changes, its child components will re-render, regardless of changes to their props.
+
+```js
+// @react
+const D = memo(() => {
+  return <>React is fun!</>
+})
+```
+
+However, if a component is wrapped in memo, it will not re-render if its props have not changed, even if the parent component has re-rendered. This means that, in such cases, the commit phase can also be skipped if no changes are detected during the render phase.
+
+
+
+# 5. Memoization
+
+## Claim 1: Premature optimization is harmful; use memoization only where necessary.
+
+Memoization is an expensive operation, so it’s important to be cautious when paying the cost of optimization. For example, with a very simple function, it might be better to perform the calculation each time rather than memoizing the result. Although this example is extreme, for many lightweight tasks, calculating results on the fly can be faster than storing and retrieving them from memory. Memoization is inherently a trade-off, as it involves caching results to potentially improve future performance, but this caching occupies memory. If the performance gain from memoization doesn’t outweigh the cost of rendering, it may not be worth it.
+
+React will attempt to keep cache results for as long as possible, but there are cases where the cache may be invalidated. There’s no guarantee that React will always provide `useMemo` for performance optimization. Premature optimization, where developers predict high rendering areas and apply memoization without evidence, is not advisable. It is better to use development tools and `useEffect()` to observe actual rendering behavior and optimize only where necessary.
+
+
+## Claim 2: Rendering is expensive; memoize everything.
+
+oth claims share a common assumption: memoization can be beneficial for performance in certain components. Regardless of whether it’s considered premature optimization, if a component frequently re-renders and performs expensive operations during rendering, or if the component itself has many child components, using memoization like memo or other techniques can offer significant advantages.
+
+Now We have two options:
+1. Apply memo **selectively**: Carefully evaluate components and apply memoization only where it is beneficial. This approach is ideal but can be challenging in large React applications with many developers and complex components.
+2. Apply memo **universally**: Wrap all components with memo as a default approach. While this might not be the most precise method, it can be practical in complex applications where the ideal selective approach is not feasible.
+
+### Considerations for each approach:
+
+1. Selective Application: This is the ideal scenario, but as the application grows and becomes more complex, maintaining this approach can be difficult. Applying `memo` to components with low rendering costs or infrequent rendering might introduce unnecessary overhead.
+2. Universal Application: Wrapping all components with memo could initially seem like a solution, but it has potential downsides:
+- Shallow Comparison Cost: Memoization involves shallow comparison of props, which incurs CPU and memory costs for storing and retrieving previous rendering results.
+- Increased Complexity: If props are large or complex, the cost of shallow comparison can increase.
+- Rendering Costs: Without memoization, the costs include the overhead of rendering, re-executing complex logic, and the repeated execution in child components.
+- Reconciliation Overhead: React needs to compare the old and new trees during reconciliation, which can be costly.
+
+Memoizing everything might avoid some rendering costs but can introduce additional overhead from shallow comparisons and increased complexity. The decision should be based on actual performance needs and observed rendering behavior, balancing the benefits of memoization against the potential costs.
+
+When using `useMemo` and `useCallback`, you need to evaluate whether the cost of comparing dependency arrays and recalculating values when necessary is cheaper than the cost of regenerating values and functions every time. Thus, it is worth considering whether to apply memoization broadly. Without memoization or similar optimizations, every object will be regenerated during re-renders, resulting in changed references. These changed references, if used in dependency arrays like those in useEffect, can cause unintended side effects.
+
+```js
+// @react
+function useMath(number: number) {
+  const [double, setDouble] = useState(0);
+  const [triple, setTriple] = useState(0);
+
+  useEffect(() => {
+    setDouble(number * 2);
+    setTriple(number * 3);
+  }, [number]);
+
+  return { double, triple }
+}
+
+export default function App() {
+  const [counter, setCounter] = useState<number>(0);
+  const value = useMath(10);
+
+  useEffect(() => {
+    console.log(value.double, value.triple);
+  }, [value]); // value does not change, but console.log() called
+
+  function handleClick() {
+    setCounter((prev) => prev + 1);
+  }
+
+  return (
+    <>
+      <h2>{counter}</h2>
+      <button onClick={handleClick}>+</button>
+    </>
+  )
+}
+```
+
+When the function `App` is called, `useMath` is called repeatedly, and although the values inside the objects are the same, the references change, causing `console.log` to be called continuously.
+
+```js
+// @react
+function useMath(number: number) {
+  const [double, setDouble] = useState(0);
+  const [triple, setTriple] = useState(0);
+
+  useEffect(() => {
+    setDouble(number * 2);
+    setTriple(number * 3);
+  }, [number])
+
+  return useMemo(() => ({ double, triple }), [double, triple])
+}
+```
+
+Wrapping the return value of `useMath` with `useMemo` allows you to maintain the same result as long as the value doesn't change, and it ensures reference transparency for the consumer. In other words, memoization not only optimizes the re-rendering of the component itself but also provides assurance to the consumer that it can rely on consistent, unchanging values.
+
+In summary, memoization generally offers more benefits than not using it. Even if it might be considered premature optimization, the advantages it provides and the potential risks of missing out on optimization are significant. Therefore, if you are unsure about optimization, it is generally better to use memoization wherever possible.
+
+
+

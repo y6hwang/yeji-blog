@@ -1,0 +1,504 @@
+import ImageViewer from '@/components/ImageViewer';
+
+export let metadata = {
+  title: '/dsa/search',
+  description:
+    '',
+};
+
+
+# 1. Depth-First Search (DFS)
+
+- **Description**: DFS is a graph traversal algorithm that starts at a given node (often called the root) and explores as far as possible along each branch before backtracking. It dives deep into one path before moving on to the next one.
+- **Approach**: It uses a stack data structure, either explicitly (in iterative implementations) or via the call stack (in recursive implementations). 
+- **Use Cases**: Useful for exploring all possible paths in a maze, solving puzzles like mazes or Sudoku, and checking for cycles in a graph.
+- **Complexity**:
+  1. **Time**: O(V + E) where V is the number of vertices (nodes) and E is the number of edges in the graph. DFS explores all nodes and edges.
+  2. **Space**: 
+      - **Recursive**: O(V) due to the call stack (can be up to the depth of the graph).
+      - **Iterative**: O(V) due to the stack used for traversal.
+
+- **Process:**
+  1. **Start:** Begin at the root (or any arbitrary node) and mark it as visited.
+  2. **Explore:** Move to an adjacent, unvisited node, mark it as visited, and continue the process.
+  3. **Backtrack:** If there are no unvisited adjacent nodes, backtrack to the previous node and explore other unvisited nodes.
+  4. **Repeat:** Continue the process until all nodes have been visited.
+
+
+## Q23. Connected Component
+
+```js
+// @ts
+class GraphNode<T> {
+    value: T;
+    neighbors: GraphNode<T>[];
+
+    constructor(value: T) {
+        this.value = value;
+        this.neighbors = [];
+    }
+
+    addNeighbor(node: GraphNode<T>) {
+        this.neighbors.push(node);
+    }
+}
+
+const connectedComponent = (graph: GraphNode<number>[]): number => {
+  const visited = new Set();
+
+  const dfs = (node: GraphNode<number>): void => {
+    if (visited.has(node)) return;
+    visited.add(node);
+    node.neighbors.forEach((neighbor) => dfs(neighbor));
+  }
+  
+  let connected = 0;
+  for (let node of graph) {
+    if (visited.has(node)) continue;
+    connected++;
+    dfs(node);
+  }
+  return connected;
+}
+
+// create nodes
+const node1 = new GraphNode(1);
+const node2 = new GraphNode(2);
+const node3 = new GraphNode(3);
+const node4 = new GraphNode(4);
+const node5 = new GraphNode(5);
+const node6 = new GraphNode(6);
+
+// add edges
+node1.addNeighbor(node2);
+node2.addNeighbor(node5);
+node3.addNeighbor(node4);
+node4.addNeighbor(node6);
+node5.addNeighbor(node1);
+
+console.log(connectedComponent([node1, node2, node3, node4, node5, node6])) // 2
+
+// all connected
+node2.addNeighbor(node4);
+node2.addNeighbor(node3);
+console.log(connectedComponent([node1, node2, node3, node4, node5, node6])) // 1
+```
+
+## Q24. 7331
+
+7331 is interesting because 7331 is a prime number, 733 is also prime, 73 is prime, and 7 is prime. In other words, all numbers from the leftmost 1-digit to the full 4-digit number are prime. Given a number N, find all such prime numbers among the digits of N.
+
+- `1 <= N <= 8`
+
+```js
+// @ts
+const specialPrime = (N: number): number[] => {
+  let result = [];
+
+  const isPrime = (n: number): boolean => {
+    for (let i = 2; i < Math.floor(n/2+1); i++) {
+      if (n % i == 0) return false;
+    }
+    return true;
+  }
+
+  const dfs = (n: number): void => {
+    if (n.toString().length == N) {
+      result.push(n);
+    } else {
+      for (let i = 1; i <  10; i++) {
+        if (i % 2 == 0) continue;
+        if (isPrime(n*10+i)) dfs(n*10+i); // add digit if prime
+      }
+    }
+  }
+  
+  dfs(2);
+  dfs(3);
+  dfs(5);
+  dfs(7);
+
+  return result;
+}
+
+console.log(specialPrime(4));
+```
+
+## Q25. Friends
+
+Write code to determine if there exist people A, B, C, D, and E with the following friendships:
+- A is friends with B
+- B is friends with C
+- C is friends with D
+- D is friends with E
+
+```js
+// @ts
+class GraphNode<T> {
+    value: T;
+    neighbors: GraphNode<T>[];
+
+    constructor(value: T) {
+        this.value = value;
+        this.neighbors = [];
+    }
+
+    addNeighbor(node: GraphNode<T>) {
+        this.neighbors.push(node);
+    }
+}
+
+const isConnected = (graph: GraphNode<number>[]): boolean => {
+  let visited = new Set();
+  let depth = 0;
+
+  const dfs = (node: GraphNode<number>): void => {
+    if (visited.has(node)) return;
+    depth++;
+    visited.add(node);
+    node.neighbors.forEach((neighbor) => dfs(neighbor));
+  }
+
+  for (let node of graph) {
+    if (visited.has(node)) continue;
+    dfs(node);
+    if (depth >= 5) return true;
+  }
+
+  return false;
+}
+
+// create nodes
+const node0 = new GraphNode(0);
+const node1 = new GraphNode(1);
+const node2 = new GraphNode(2);
+const node3 = new GraphNode(3);
+const node4 = new GraphNode(4);
+const node5 = new GraphNode(5);
+const node6 = new GraphNode(6);
+const node7 = new GraphNode(7);
+
+// add edges
+node0.addNeighbor(node4);
+node1.addNeighbor(node7);
+node2.addNeighbor(node7);
+node3.addNeighbor(node4);
+node3.addNeighbor(node5);
+node3.addNeighbor(node7);
+node4.addNeighbor(node6);
+node4.addNeighbor(node7);
+
+console.log(isConnected([node0, node1, node2, node3, node4, node5, node6, node7]))
+```
+
+
+# 2. Breadth-First Search (BFS)
+
+- **Description**: BFS is another graph traversal algorithm, but unlike DFS, it explores all the nodes at the present depth level before moving on to nodes at the next depth level. It systematically explores nodes layer by layer.
+- **Approach**: It uses a queue data structure to keep track of nodes to explore next.
+- **Use Cases**: Suitable for finding the shortest path in an unweighted graph, level-order traversal of trees, and in network broadcasting.
+- **Complexity**:
+  1. **Time Complexity**: O(V + E), similar to DFS, BFS also explores all nodes and edges.
+  2. **Space Complexity**: O(V), BFS requires space for the queue that stores the nodes at each level.
+- **Process:**
+  1. **Start:** Begin at the root (or any arbitrary node) and mark it as visited.
+  2. **Queue:** Enqueue the node in a queue.
+  3. **Explore:** Dequeue a node from the queue and visit all its adjacent unvisited nodes, marking them as visited and enqueueing them.
+  4. **Repeat:** Continue the process until the queue is empty.
+
+## Q26. DFS & BFS
+
+```js
+// @ts
+class GraphNode<T> {
+    value: T;
+    neighbors: GraphNode<T>[];
+
+    constructor(value: T) {
+        this.value = value;
+        this.neighbors = [];
+    }
+
+    addNeighbor(node: GraphNode<T>) {
+        this.neighbors.push(node);
+    }
+}
+
+const searchOrder = (graph: GraphNode<number>[]): void => {
+  // DFS
+  let visited = new Set();
+  let search = [];
+
+  const dfs = (node: GraphNode<number>): void => {
+    if (visited.has(node)) return;
+    visited.add(node);
+    search.push(node.value);
+    node.neighbors.forEach((neighbor) => dfs(neighbor));
+  }
+
+  for (let node of graph) {
+    if (visited.has(node)) continue;
+    dfs(node);
+  }
+
+  console.log(search);
+
+  // BFS
+  visited = new Set();
+  search = [];
+  let queue = [graph[0]];
+
+  while (queue.length) {
+    let node = queue.shift();
+
+    if (visited.has(node)) continue;
+    visited.add(node);
+    search.push(node.value);
+
+    for (let neighbor of node.neighbors) {
+      if (visited.has(neighbor)) continue;
+      queue.push(neighbor);
+    }
+  }
+
+  console.log(search);
+}
+
+// create nodes
+const node1 = new GraphNode(1);
+const node2 = new GraphNode(2);
+const node3 = new GraphNode(3);
+const node4 = new GraphNode(4);
+
+
+// add edges
+node1.addNeighbor(node2);
+node1.addNeighbor(node3);
+node1.addNeighbor(node4);
+node2.addNeighbor(node1);
+node2.addNeighbor(node4);
+node3.addNeighbor(node1);
+node3.addNeighbor(node4);
+node4.addNeighbor(node1);
+node4.addNeighbor(node2);
+node4.addNeighbor(node3);
+
+searchOrder([node1, node2, node3, node4]);
+```
+
+## Q27. Exploring a Maze
+
+There is a maze represented as an N * M array. In the maze, each cell contains a number: 1 represents a cell that can be moved into, and 0 represents a cell that cannot be moved into. When moving from one cell to another, you can only move to an adjacent cell. When counting the number of cells moved, include both the starting and destination positions. Find the minimum number of cells required to move from position (0, 0) to position (N-1, M-1).
+
+```js
+// @ts
+const exploreMaze = (maze: number[][]): number => {
+  const dy = [0, 1, 0, -1];
+  const dx = [1, 0, -1, 0];
+  const N = maze[0].length;
+  const M = maze.length;
+
+  let queue = [[0,0]]
+  let visited = Array(M).fill().map(() => Array(N).fill(false));
+  while (queue.length) {
+    const pos = queue.shift();
+    for (let k = 0; k < 4; k++) {
+      let x = pos[0] + dx[k];
+      let y = pos[1] + dy[k];
+      if (x >= 0 && y >= 0 && x < N && y < M) {
+        if (maze[y][x] && !visited[y][x]) {
+          visited[y][x] = true;
+          maze[y][x] = maze[pos[1]][pos[0]] + 1;
+          queue.push([x,y]);
+          
+        }
+      }
+    }
+  }
+  return maze[M-1][N-1]
+}
+
+const maze = [
+  [1,0,1,1,1,1],
+  [1,0,1,0,1,0],
+  [1,0,1,0,1,1],
+  [1,1,1,0,1,1]
+];
+console.log(exploreMaze(maze)); // 15
+```
+
+## Q28. Longest Distance
+
+```js
+// @ts
+const longestDistance = (tree: Map<>): number => {
+  const dfs = (start) => {
+        let visited = new Set([start]);
+        let queue = [start];
+        let distance = Array(tree.size+1).fill(0);
+        
+        while (queue.length) {
+            let node = queue.shift();
+            for (let children of tree.get(node)) {
+                if (!visited.has(children[0])) {
+                    visited.add(children[0]);
+                    distance[children[0]] = distance[node] + children[1];
+                    queue.push(children[0]);
+                }
+            }
+        }
+        
+        return distance
+    }
+    
+    let start = tree.keys().next().value;
+    let distance = dfs(start);
+
+    let longest = distance[0];
+    let longestIdx = 0;
+    for (let i = 0; i < distance.length; i++) {
+        if (distance[i] > longest){
+            longest = distance[i];
+            longestIdx = i;
+        }
+    }
+
+    distance = dfs(longestIdx);
+    
+    return Math.max(...distance);
+}
+
+const tree = new Map([
+    [1, [[3,2]]], // [node, dist]
+    [2, [[4,4]]],
+    [3, [[1,2], [4,3]]],
+    [4, [[2,4], [3,3], [5,6]]],
+    [5, [[4,6]]],
+])
+
+console.log(longestDistance(tree)); // 11
+```
+
+
+# 3. Binary Search
+
+- **Description**: Binary Search is a searching algorithm that finds the position of a target value within a sorted array. It compares the target value to the middle element of the array, and based on the comparison, it halves the search space until the target is found or the search space is empty.
+- **Approach**: It operates on sorted arrays and uses a divide-and-conquer approach, repeatedly halving the search interval.
+- **Use Cases**: Efficiently finding an element in a sorted array, looking up records in a database index, and in algorithms like binary search trees.
+- **Complexity**:
+  - **Time**: O(log N) where N is the number of elements in the sorted array. Binary Search repeatedly halves the search space.
+  - **Space**: 
+      - **Iterative**: O(1) as it only requires a few variables for indices.
+      - **Recursive**: O(log N) due to the call stack.
+- **Process:**
+  1. **Start:** Begin with two pointers, `low` at the start of the array and `high` at the end.
+  2. **Midpoint:** Calculate the midpoint `mid = (low + high) / 2`.
+  3. **Compare:**
+      - If the target value equals the midpoint value, return the midpoint index.
+      - If the target value is less than the midpoint value, set `high` to `mid - 1` (search the left half).
+      - If the target value is greater than the midpoint value, set `low` to `mid + 1` (search the right half).
+  4. **Repeat:** Continue the process until the target value is found or `low` exceeds `high`.
+
+
+## Q29. Find Integers
+
+```js
+// @ts
+const findIngegers = (list1: number[], list2: number[]): number[] => {
+    let result: number[] = [];
+    list.sort();
+    
+    for (let i = 0; i < list2.length; i++) {
+        let target = list2[i];
+        let start = 0;
+        let end = list.length-1;
+        while (start <= end) {
+            let mid = Math.floor((start + end) / 2);
+            let midVal = list[mid];
+            if (midVal > target) end = mid-1;
+            else if (midVal < target) start = mid+1;
+            else {
+                result.push(target);
+                break;
+            }
+        }
+    }
+    
+    return result;
+}
+
+const list = [4, 1, 5, 2, 3];
+const target1 = [1, 3, 7, 9, 5];
+const target2 = [5, 4, 3, 2, 1];
+console.log(findIngegers(list, target1));
+console.log(findIngegers(list, target2));
+```
+
+## Q30. Make Blu-ray Disc
+
+Write code to find the minimum possible size of a Blu-ray disc that can accommodate N lessons, where the lessons must be recorded in the given order without rearranging them.
+
+- `lessons<number[]>`: The length of each lesson is given as a natural number in minutes.
+- `discs<number>`: number of blu-ray discs
+
+```js
+// @ts
+const minimumSize = (lessons: number[], disc: number): number => {
+  let start = Math.max(...lessons);
+  let end = lessons.reduce((cur, acc) => acc+cur);
+  
+  while (start <= end) {
+      let mid = Math.floor((start + end) / 2);
+      let sum = 0;
+      let count = 0;
+      for (let i = 0; i < lessons.length; i++) {
+          if (sum + lessons[i] > mid) {
+              count++;
+              sum = 0;
+          }
+          sum += lessons[i];
+      }
+      if (sum !== 0) count++;
+      
+      if (count > disc) start = mid+1;
+      else end = mid-1;
+  }
+  
+  return start;
+}
+
+const lessons = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+console.log(minimumSize(lessons, 3)); // 17
+
+```
+
+## Q31. Find k-th number
+
+Write code to find `B[k]` when the numbers in an N*N array `A`, where `A[i][j] = i * j`, are flattened into a 1-dimensional array `B` of size `N * N` and sorted in ascending order (index starts from 1). 
+
+```js
+// @ts
+const kthNumber = (N: number, k: number): number => {
+  let result = 0;
+  let start = 1;
+  let end = k;
+  
+  while (start <= end) {
+      let mid = Math.floor((start + end) / 2);
+      let cnt = 0;
+      
+      for (let i = 1; i < N+1; i++) {
+          cnt += Math.min(Math.floor(mid / i), N);
+      }
+      if (cnt < k) start = mid + 1;
+      else {
+          result = mid;
+          end = mid - 1;
+      }
+  }
+  
+  return result;
+}
+
+console.log(kthNumber(3, 7)); // 6
+```

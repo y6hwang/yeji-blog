@@ -1,0 +1,176 @@
+export let metadata = {
+  title: '/dsa/greedy',
+  description:
+    '',
+};
+
+# Greedy Algorithm
+
+A greedy algorithm is an approach to solving problems by making a series of choices, each of which looks the best at the moment. The key idea is to make a locally optimal choice at each step with the hope that these choices will lead to a globally optimal solution.
+
+The process of a greedy algorithm:
+1. **Choose a solution:** Select what appears to be the best solution at the current step.
+2. **Feasibility check:** Ensure that the current choice does not violate the problem's constraints.
+3. **Solution check:** Verify if the set of chosen solutions so far solves the entire problem. If it does not, go back to **1** and repeat the process.
+
+## Q27. Finding the minimum number of coins
+
+You have N types of coins, each with a large quantity available. Write code to find the minimum number of coins needed to sum up to a total value of K by using the coins appropriately.
+
+```js
+// @ts
+const minCoins = (coins: number[], K: number): number => {
+  let result = 0;
+  let target = K;
+  for (let i = coins.length-1; i >= 0; i--) {
+      if (coins[i] <= target) {
+          result += Math.floor(target/coins[i]);
+          target = target % coins[i];
+      }
+  }
+  return result;
+}
+
+
+console.log(minCoins([0.01,0.05,0.1,0.5,1,5,10,100,500], 42)) // 6
+
+```
+
+## Q33. Sorting Cards
+
+Write code to find the minimum number of comparisons required when given the sizes of N bundles of number cards.
+
+```js
+// @ts
+const sortCards = (cards: number[]): number => {
+  let result = 0;
+    cards.sort();
+    while (cards.length > 1) {
+        const d1 = cards.shift();
+        const d2 = cards.shift();
+        let count = d1 + d2;
+        result += count;
+        cards.push(count);
+        cards.sort();
+    }
+    return result;
+}
+
+console.log(sortCards([10,20,40]));
+```
+
+## Q34. Create the maximum sum by grouping numbers.
+
+Write code to group the given sequence of numbers in such a way that the total sum is maximized. You can group any two numbers in the sequence regardless of their positions, and when calculating the sum, multiply the two grouped numbers before adding them to the total.
+
+```js
+// @ts
+const maxGroupSum = (numbers: number[]): number => {
+    let sum = 0;
+    
+    // divide into 4 groups
+    let pos = []; // n > 1
+    let neg = []; // n < 0
+    let ones = 0;
+    let zeros = 0;
+    for (let n of numbers) {
+      if (n == 0) zeros++;
+      else if (n == 1) ones++;
+      else if (n > 1) pos.push(n);
+      else if (n < 0) neg.push(n);
+    }
+
+    // pos: group largest then add
+    pos.sort();
+    while (pos.length > 1) {
+      const n1 = pos.pop();
+      const n2 = pos.pop();
+      sum += n1 * n2;
+    }
+    if (pos.length) sum += pos[0];
+
+    // neg: group smallest then add
+    neg.sort();
+    while (neg.length > 1) {
+      const n1 = neg.pop();
+      const n2 = neg.pop();
+      sum += n1 * n2;
+    }
+    if (neg.length) {
+      if (zeros) zeros--; // mult by 0
+      else sum += neg[0]; // add to sum
+    }
+
+    return sum + ones;
+}
+
+console.log(maxGroupSum([-1, -8, 2, 1, 3, 6, -5, 0, 1])); // 62
+```
+
+## Q35. Meeting Rooms
+
+You need to create a schedule to hold N meetings in a single meeting room. Given the start and end times for each meeting, write code to determine the maximum number of meetings that can be held without overlapping meeting times.
+
+```js
+// @ts
+const assignMeetingRooms = (meetings: number[][]): number => {
+  meetings.sort((a,b) => {
+    if (a[1] == b[1]) return a[0] - b[0];
+    else return a[1] - b[1]
+  });
+  
+  let result = 0;
+  let curEnd = 0;
+  for (let meeting of meetings) {
+    if (curEnd <= meeting[0]) {
+      result++;
+      curEnd = meeting[1];
+      console.log(`${meeting[0]}-${meeting[1]}`);
+    }
+  }
+  return result;
+}
+
+const meetings = [
+  [3, 5],
+  [5, 6],
+  [0, 6],
+  [1, 4],
+  [5, 7],
+  [3, 8],
+  [5, 9],
+  [6, 10],
+  [8, 11],
+  [8, 12],
+  [2, 13],
+  [12, 14]
+]
+
+console.log(assignMeetingRooms(meetings));
+```
+
+## Q36. Finding the Bracket Placement to Minimize the Value
+
+Given a mathematical expression consisting of positive numbers, plus signs (+), and minus signs (-), the goal is to remove all parentheses and then reinsert them in a way that minimizes the value of the expression. Write code to appropriately place the parentheses in the expression to achieve the minimum possible value.
+
+```js
+// @ts
+const minimize = (exp: string): number => {
+  const adds: string[] = exp.split("-");
+  const subtract: number[] = [parseInt(adds.shift())];
+
+  for (let add of adds) {
+    const number: number[] = add.split("+").reduce(
+      (cur, acc) => cur + parseInt(acc),
+      0
+    );
+    subtract.push(number);
+  }
+  return subtract.reduce(
+    (cur, acc) => cur - acc,
+    subtract.shift()
+  );
+}
+
+console.log(minimize("100-40+50+74-30+29-45+43+11")); //-222
+```

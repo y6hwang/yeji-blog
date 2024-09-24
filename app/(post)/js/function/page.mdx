@@ -1,0 +1,174 @@
+export let metadata = {
+  title: '/js/function',
+  description:
+    '',
+};
+
+# 1. What is Function?
+
+```js
+// @noexec
+function Component(props) {
+  return <div>{props.hello}</div>
+}
+```
+
+A function called `Component` is declared, which typically takes a single object called `props` as a parameter and returns JSX in the `return` statement. The difference from a regular function is that while in JavaScript you might call `Component(props)`, in React, the function component is called with `<Component {...props} />`, which uses the spread operator to pass all props. Additionally, it is also possible to call function components using regular JavaScript syntax beyond the JSX format.
+
+
+# 2. 4 ways to define a function
+
+## Function Declaration
+
+```js
+const sum = function sum(a,b) {
+  return a + b
+ }
+ console.log(sum(10,24)); // 34
+```
+
+According to the definition of a function declaration, a function declaration is literally a "declaration" and does not express any value, so it seems natural that it cannot be assigned to a variable like an expression. However, the example above behaves as if it is assigning the function `sum` to a variable called `sum`, similar to an expression. This is because the JavaScript engine sometimes interprets the same function as an expression rather than a statement depending on the context of the code. Therefore, function literals with names can be used as both declarations and expressions depending on the code context.
+
+## Function Expression
+
+In JavaScript, functions are first-class objects. Functions meet all the criteria for being first-class objects because they can be passed as parameters to other functions, can be returned as values, and can be assigned to variables.
+_First-class object: An object that supports all the operations generally applicable to other objects._
+
+### Function Declaration vs Function Expression
+
+The biggest difference between these two methods is hoisting.
+_Hoisting: Function hoisting refers to the JavaScript feature where function declarations behave as if they are written at the very top of the code._
+
+```js
+hello() // hello
+
+function hello() {
+  console.log('hello');
+}
+
+hello() // hello
+```
+
+Function hoisting refers to the process of registering function declarations in memory before executing the code. Because of this feature, function declarations are registered in memory beforehand, so the `hello`function can be called at the beginning of the code without any error, even though it is declared in the middle.
+
+```js
+// @noexec
+console.log(typeof hello === 'undefined'); // true
+
+hello() // Uncaught TypeError: hello is not fucntion
+                
+var hello = function () {
+  console.log('hello');
+};
+```
+
+In contrast, function expressions assign functions to variables. Variables are also hoisted, but unlike function declarations, they are initialized to `undefined` during the hoisting process. Variables are initialized to `undefined` before runtime, and the function is assigned and becomes operational only when the assignment statement is executed at runtime.
+
+
+## Function Constructor
+
+```js
+const add = new Function('a','b','return a + b');
+console.log(add(10,24)); // 34
+```
+
+## Arrow Function
+1. In arrow functions, the `constructor` cannot be used. In other words, it is impossible to use an arrow function as a constructor function.
+```js
+// @noexec
+const Car = (name) => {
+  this.name = name
+}
+
+const myCar = new Car('hi');
+```
+
+2. Arrow functions do not have `argument`.
+```js
+// @noexec
+function hello() {
+  console.log(arguments);
+}
+
+hello(1,2,3); // Arguments(3) [1, 2, 3, callee: f, Symbol(Symbol.iterator): f]
+
+const hi = () => {
+  console.log(arguments);
+}
+
+hi(1,2,3);
+```
+
+3. The biggest difference between arrow functions and regular functions is `this` binding. In class components, the behavior differs when declaring a method to bind to an event as an arrow function versus a regular function. `this` refers to the value pointing to the object it belongs to or the instance it creates. Before arrow functions, `this` was not determined when the function was defined but was dynamically determined based on how the function was called. If a function is called as a regular function, the `this` inside will refer to the global object. However, unlike regular functions, arrow functions do not have their own binding for `this`.When `this` is referenced inside an arrow function, it follows the `this` value from the enclosing scope.
+
+```js
+// @react
+class Component extends React.Components {
+  constructor(props) {
+    super(props);
+     this.state = {
+      counter: 1,
+    };
+  }
+
+  functionCountUp() {
+    console.log(this); // undefined
+    this.setState((prev) => ({ counter: prev.counter + 1 }));
+  }
+
+  ArrowFunctionCountUp = () => {
+    console.log(this) // class Component
+    this.setState((prev) => ({ counter: prev.counter + 1 }))
+  }
+
+  render() {
+    return (
+      <div>
+        {/* Cannot read properties of undefined (reading 'setState') */}
+        <button onClick={this.functionCountUp}>regular function</button>
+        {/* Work as expected */}
+        <button onClick={this.ArrowFunctionCountUp}>arrow function</button>
+      </div>
+    )
+  }
+}
+```
+
+
+# 3. Function Types
+
+## Immediately Invoked Function Expression (IIFE)
+
+```js
+console.log(
+  ((a,b) => {
+      return a + b;
+    }
+  )(10,24)) // 34
+```
+
+An immediately-invoked function expression (IIFE) is a function that is declared and called immediately, making it impossible to call it again. Therefore, it is generally unnamed. By leveraging this characteristic of IIFEs, you can operate an independent function scope that does not pollute the global scope. Additionally, it helps reinforce to anyone reading the code that this function will not be called again, which can aid in refactoring.
+
+## High Order Function
+
+```js
+// A representative higher-order function that takes a function as a parameter, Array.prototype.map
+const doubleArray = [1, 2, 3].map((item) => item * 2);
+console.log(doubleArray); // [2, 4, 6]
+
+// An example of a higher-order function that returns a function
+const add = function (a) {
+  // construct closure with a
+  return function (b) {
+    return a + b;
+  }
+}
+console.log(add(1)(3)); // 4
+```
+
+
+# 4. Things to keep in mind
+
+- Minimize side effects of the function as much as possible.
+- Make functions as small as possible. ESLint has a rule called `max-lines-per-function`. The longer the code in a function, the higher the chance of problematic code and the harder it becomes to track what’s happening inside.
+- Give functions names that anyone can understand.

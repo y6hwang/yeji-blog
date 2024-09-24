@@ -1,0 +1,730 @@
+export let metadata = {
+  title: '/react/ssr',
+  description:
+    '',
+};
+
+
+
+# 1. What is server-side rendering?
+
+## Single Page Application
+
+A **single-page application (SPA)** relies on browser JavaScript for most of its rendering and routing functions, rather than the server. This is the opposite of a server-side rendering application. In an SPA, after the initial page load, all page transitions and operations are handled by JavaScript and the browser's `history.pushState` and `history.replaceState`. This means that after the first page is loaded, no additional HTML is downloaded from the server, and all interactions are managed within a single page.
+
+Conversely, traditional server-side applications request and download a new HTML page for every page transition, parsing the new page from scratch. This can result in a less smooth experience for users, as the entire page needs to be re-rendered each time.
+
+By handling page transitions with JavaScript, once all resources are downloaded initially, no additional download time is required for subsequent page transitions. Additionally, instead of re-rendering the entire page, only the specific sections that need updating are re-rendered, providing a much smoother user interface.
+
+One of the most polished SPAs currently in service is Gmail. After an initial loading period, all page transitions are handled by JavaScript. For example, when clicking on an email in the list, the URL changes, but the page smoothly transitions to display the specific email without reloading the entire page.
+
+### JAM Stack
+
+As JavaScript began to handle an increasing variety of tasks, discussions on modularizing JavaScript
+started to emerge, leading to the introduction of CommonJS and AMD. These efforts in JavaScript
+modularization, combined with improvements in device performance and internet speeds, expanded the
+capabilities of JavaScript significantly.
+
+Frameworks like Backbone.js, Angular.js, and Knockout.js emerged, further enhancing the role of JavaScript. This evolution eventually led to the era of well-known libraries and frameworks such as React, Vue, and Angular. Today, many web applications rely heavily on JavaScript to the point where they cannot properly render pages without it. Developers, influenced by these changes, have started to manage all aspects of a webpage—from rendering to user interactions—through single-page rendering methods, making this approach increasingly popular.
+
+Traditional web development was centered around the LAMP stack, which consists of Linux (operating system), Apache (server), MySQL (database), and PHP/Python (web framework). This stack was not only popular but also a necessary choice in the past because JavaScript's capabilities were limited, necessitating that most processing be done on the server. When web applications became more complex or gained more users, servers needed to be scaled up. However, scaling servers was quite cumbersome due to the lack of cloud infrastructure at that time.
+
+With the emergence of frameworks like Backbone.js, Angular.js, and Knockout.js, a new paradigm called the JAM (JavaScript, API, Markup) stack was introduced. Since much of the work could now be done in JavaScript, the frontend could be pre-built with JavaScript and markup (HTML, CSS) and served statically to users. This allowed for more scalable solutions as the operations were handled on the client's browser, reducing server load and easing scalability concerns.
+
+The popularity of the JAM stack, coupled with the advancements in Node.js, led to the rise of stacks like MEAN (MongoDB, Express.js, AngularJS, Node.js) and MERN (MongoDB, Express.js, React, Node.js), where even the API servers were implemented in JavaScript. These modern stacks further leveraged JavaScript's capabilities, making it possible to develop full-fledged applications using a single language across the entire stack.
+
+
+## Server-side Rendering
+
+Server-side rendering (SSR) is a technique where the server renders the initial page view, delivering it quickly to the user. This approach is gaining renewed attention as a solution to the inherent limitations of single-page applications (SPAs) that can lead to slower web page performance.
+
+In SPAs, the JavaScript bundle provided to the user handles rendering. However, with SSR, all rendering tasks are performed on the server. While client-side rendering is influenced by the performance of the user's device, server-side rendering provides more consistent and stable rendering because it is handled by the server.
+
+### Advantages of SSR
+
+Rendering the initial page on the server offers several advantages compared to single-page applications (SPAs):
+1. Faster Initial Page Load: When a user first accesses a page, the time it takes to render meaningful content (First Contentful Paint) can be quicker with server-side rendering (SSR). Although SSR isn't always faster than client-side rendering in every scenario, it tends to be more efficient when the rendering is dependent on HTTP requests or the HTML size is large. 
+2. Easier Metadata Provision for Search Engines and Social Media: SSR is beneficial for search engine optimization (SEO). The process for search engines to retrieve necessary information from a site includes:
+> - Search engine bots enter the page.
+> - The page provides HTML, which the bots download without executing JavaScript.
+> - The bots extract and store metadata (like Open Graph or meta tags) from the HTML for search indexing.
+> The main difference between bots and user browsers is that bots do not execute JavaScript, focusing solely on static HTML. Since SPAs heavily rely on JavaScript for operations and metadata, they may face SEO and social sharing issues if these details aren't provided initially. Conversely, SSR processes rendering on the server, allowing it to package necessary metadata in the HTML response, making SEO optimization straightforward.
+3. Reduced Cumulative Layout Shift: Cumulative Layout Shift (CLS) refers to unexpected changes in page layout during loading, which can disrupt user experience. Since SSR delivers a fully rendered page after all requests are completed, it mitigates this issue, providing a stable layout from the start.
+4. Less Dependence on User Device Performance: JavaScript execution relies heavily on the user's device performance. SSR offloads this burden to the server, making the experience less dependent on the user's hardware capabilities.
+5. Enhanced Security: A common issue with JAMstack projects is that all application activities are exposed in the browser. SSR can handle sensitive operations, such as API calls and authentication, on the server and only send the necessary results to the browser, thereby reducing security risks.
+
+
+### Disadvantage of SSR
+
+Before implementing server-side rendering (SSR), several factors must be considered:
+1. Always Consider the Server When Writing Source Code: One of the primary challenges is handling global objects that are only available in the browser, such as window or sessionStorage. If the code might run on the server, access to window should be minimized. If using window is unavoidable, ensure that the code does not execute on the server. Similarly, external libraries that depend on the browser environment must be either replaced or handled to ensure they only run on the client. The more problematic code there is, the more code will need to run on the client, which can negate the benefits of SSR.
+2. Establish an Appropriate Server Infrastructure: Adequate physical capacity must be secured to handle user requests appropriately. Contingency plans should be in place to recover from unexpected failures. Additionally, using a process manager like pm2 can help distribute requests and recover processes that unexpectedly go down.
+3. Service Delays: In single-page applications, even if some tasks are slow, a basic initial screen can be shown with a "loading" indicator, allowing users to wait. However, with SSR, if delays occur—especially during initial rendering—it can cause significant problems. Until the rendering is complete, SSR cannot provide any information to the user. As the application's complexity grows and various requests cause bottlenecks, SSR might lead to a worse user experience than client-side rendering.
+
+
+## Single Page Application vs. Server-Side Rendering Applications:
+
+### An Outstanding SPA Outperforms an Outstanding Multi-Page Application:
+
+Consider a highly optimized SPA like Gmail. It optimizes initial page load by requesting only essential information and defers less critical resources like images through lazy loading. By implementing code splitting, it ensures only the necessary JavaScript is downloaded and executed, preventing unnecessary resource usage. SPA updates only the necessary HTML areas during routing, minimizing user fatigue. Even with extensive optimizations, a multi-page application cannot surpass the smooth routing performance of an SPA leveraging browser APIs and JavaScript for routing.
+
+
+### An Average SPA Is Slower Than an Average Multi-Page Application:
+
+Multi-page applications request server rendering for each page load, delivering consistent performance based on stable server resources. However, an average SPA may suffer from performance issues if not optimized for rendering and routing, leading to inconsistent performance across different devices. Proper optimization for SPAs is challenging, making them potentially slower compared to multi-page applications. Modern browsers are introducing APIs to address routing issues in multi-page applications, such as:
+- Paint Holding: Displays the previous page instead of a white screen during routing within the same origin.
+- Back Forward Cache (bfcache): Caches pages to show during forward and backward navigation.
+- Shared Element Transitions: Smoothly transitions between pages by maintaining context for shared elements.
+
+### >Modern Server-Side Rendering:
+
+Traditional LAMP stack-based applications render all pages on the server, offering quick initial page loads but slower subsequent routing due to server dependency. Modern SSR solutions combine the benefits of both approaches. Initially, the server renders the complete HTML for the first page load. For subsequent routing, client-side JavaScript handles rendering, mimicking the behavior of SPAs. Frameworks like Next.js and Remix exemplify this hybrid approach, providing enhanced web experiences by leveraging SSR for initial loads and SPA-like behavior for subsequent interactions.
+
+
+
+# 2. React API for Server-side rendering
+
+By default, React is a frontend library that provides methods for rendering in the browser's JavaScript environment. However, it also offers an API that allows React applications to be rendered on the server. This API can only be executed in server environments like Node.js, not in the browser's window environment.
+
+## renderToString
+
+The `renderToString` function is used to render a React component, passed as an argument, into an HTML string. It is the most basic API for implementing server-side rendering.
+
+```js
+// @react
+import ReactDOMServer from 'react-dom/server';
+
+function ChildrenComponent({ fruits }: { fruits: string }) {
+  useEffect(() => {
+    console.log(fruits);
+  }, [fruits]);
+  
+  function handleClick() {
+    console.log('hello');
+  }
+  
+  return (
+    <ul>
+      {fruits.map((fruit) => (
+        <li key={fruit} onClick={handleClick}>
+          {fruit}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function SampleComponent() {
+  return (
+    <>
+      <div>hello</div>
+      <ChildrenComponent fruit={['apple', 'banana', 'peach']} />
+    </>
+  )
+}
+
+const result = ReactDOMServer.renderToString(
+  React.createElement('div', { id: 'root' }, <SampleComponent />),
+);
+```
+
+```js
+// @react
+<div id='root' data-reactroot=''>
+  <div>hello</div>
+  <ul>
+    <li>apple</li>
+    <li>banana</li>
+    <li>peach</li>
+  </ul>
+</div>
+```
+
+Using `renderToString` allows the server to provide a fully rendered HTML to the client, resulting in excellent performance for the initial render. It also makes it easier to provide meta information for search engines or social media sharing, compared to SPA structures.
+
+React's server-side rendering aims primarily at quickly generating the initial HTML page. While users can see the complete HTML quickly, the page still needs to download, parse, and execute additional JavaScript code related to `useEffect` or event handlers to become fully interactive for user interactions.
+
+The `data-reactroot` attribute identifies the root element of a React component. This attribute serves as a reference point for the `hydrate` function, which is used later to execute the JavaScript code and establish the root for the React application.
+
+
+## renderToNodeStream
+
+The `renderToNodeStream` function produces output that is identical to `renderToString` but with two key differences:
+- Environment Dependence: While `renderToString` and renderToStaticMarkup can be executed in the browser, `renderToNodeStream` relies entirely on the Node.js environment, making it completely unsuitable for use in the browser.
+- Output Type: `renderToString` generates a result of type `string`, whereas `renderToNodeStream` produces a Node.js `ReadableStream`. The `ReadableStream` is a byte stream encoded in UTF-8, and additional processing is required for a browser to convert this stream into a string.
+
+Streaming is a method for handling large data by breaking it into chunks and processing it incrementally. If the HTML result generated by `renderToString` is very large, loading the entire string into memory at once for response can place a significant burden on the Node.js server. Using streams, on the other hand, allows for processing large data in chunks sequentially, which can be more efficient. Most widely used React server-side rendering frameworks prefer `renderToNodeStream` over `renderToString` for this reason.
+
+```js
+// @react
+export default function App({ todos }: { todos: Array<TodoResponse> }) {
+  return (
+    <>
+      <h1>My Todos!</h1>
+      <ul>
+        { todos.map((todo, index) => (
+          <Todo key={index} todo={todo} />
+        )) }
+      </ul>
+    </>
+  ) 
+}
+```
+
+```js
+// @react
+// Node.js code
+;(async () => {
+  const response = await fetch('http://localhost:3000');
+  
+  try {
+    for await (const chunk of response.body) {
+      console.log('--- chunk ---');
+      console.log(Buffer.from(chunk).toString());
+    }
+  } catch (err) {
+    console.log(err.stack);
+  }
+})();
+```
+
+## renderToStaticNodeStream
+
+CodeBlock value='renderToStaticNodeStream` provides the same output as `renderToNodeStream`, but like `renderToStaticMarkup`, it does not include React-specific attributes required for React JavaScript. It is used when a purely static HTML result is needed and there is no need to `hydrate`.
+
+## hydrate
+
+The `hydrate` function attaches JavaScript handlers and events to the HTML content generated by `renderToString` and `renderToNodeStream`.
+
+The `render` method, which is used only in the browser, takes a component and an HTML element as arguments. It renders the component into the specified H1TML element and also attaches event handlers, performing all the necessary tasks to create a fully functional webpage based on React.
+
+The `hydrate` function is similar to `render` in terms of the arguments it takes. The key difference is that `hydrate` operates under the assumption that the HTML is already rendered, and it only attaches events to this existing HTML. If you pass pure HTML without React-specific attributes (such as the output from `renderToStaticMarkup`) as the second argument to `hydrate`, it will not be able to attach the events properly, as it relies on React-specific attributes to match the existing HTML with the React components.
+
+```js
+// @react
+<!DOCTYPE html>
+<head>
+  <title>React App</title>
+</head>
+<body>
+  <!-- root without HTML -->
+  <div id='root'></div>
+</body>
+</html>
+function App() {
+  return <span>hello</span>
+}
+
+import * as ReactDOM from 'react-dom'
+import App from './App'
+
+const rootElement = document.getElementById('root');
+
+// Warning: Expected server HTML to contain a matching <sapn> in <div>
+//  at span
+//  at App
+ReactDOM.hydrate(<App />, rootElement);
+```
+
+The `hydrate` function assumes that the HTML provided by the server matches the client’s rendered output, which is why a warning appears if `<span />` is missing. The rootElement must already contain information rendered from `<App />` for `hydrate` to work correctly. Therefore, the second argument passed to `hydrate` must include static HTML rendered by methods like `renderToString`. This is different from `render`, which renders information into an empty HTML structure.
+
+Even if there are warnings due to discrepancies between the server-rendered HTML and the client’s expectations, React will still build the webpage correctly. This is because `hydrate` not only attaches events and handlers but also performs an additional render to compare the HTML it receives with the existing rendered HTML. Any mismatches between these two renderings cause errors, and if discrepancies occur, `hydrate` will use its own rendered result to display the webpage. This extra rendering process, which involves rendering on both the server and client, ultimately negates the benefits of server-side rendering, so it should be addressed.
+
+Sometimes, discrepancies are unavoidable. For instance, if the HTML must include the current time down to the second, even if server-side rendering and `hydrate` are fast, discrepancies will still occur if the time does not match exactly within the second. In such cases, `suppressHydrationWarning` can be added to the affected elements to suppress the warning. However, this should be used sparingly and only where necessary. For accurate time recording, it might be better to expose it through `useEffect` rather than executing the function on the server, as this approach can be more precise.
+
+```js
+// @react
+<-- Warning: Text content did not match. Server: "1676461135829" Client: "1676461138621" -->
+<div>{newDate().getTime()}</div>
+
+<!-- no error -->
+<div suppressHydrationWarning>{newDate().getTime()}</div>
+```
+
+
+
+# 3. Next.js
+
+## What is Next.js?
+
+Next.js is a React-based framework developed by the American startup Vercel for building full-stack web applications. As of February 2023, Next.js has been released up to version 13 and has a much longer history and a significantly larger user base compared to other React-based server-side rendering frameworks like Remix or Hydrogen. If you're considering server-side rendering for a React-based project, choosing Next.js currently seems like the most rational choice.
+
+
+## Getting Started with Next.js
+
+```npx create-next-app@latest --ts```
+
+### package.json
+
+```js
+// @noexec
+{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+  },
+  "dependencies": {
+    "next": "12.2.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+  },
+  "devDependencies": {
+    "@types/node": "18.7.9",
+    "@types/react": "18.0.17",
+    "@types/react-dom": "18.0.6",
+    "eslint": "8.22.0",
+    "eslint-config-next": "12.2.5",
+    "typescript": "4.7.4",
+  }
+}
+```
+
+### next.config.json
+
+```js
+// @noexec
+/** @type { import('next').NextConfig } */
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+}
+
+module.exports = nextConfig
+```
+
+- Comments starting with `@type` are code added to JavaScript files to receive TypeScript type support. With these comments, you can get type assistance based on the NextConfig in Next.js; without them, you would need to type everything manually.
+- `reactStrictMode`: A tool used to alert developers to potential issues within the React application.
+- `swcMinify`: Vercel has created another open-source tool called SWC, designed to perform bundling and compilation more quickly. It can be seen as an alternative to Babel. SWC may be faster than Babel due to being written in Rust and handling tasks in parallel. `swcMinify` is a property that specifies whether to use SWC for code minification.
+
+### pages/_app.tsx
+
+The `pages` folder might sometimes be located under `src`. Whether it's in `src` or directly in the project root, it functions the same way.
+
+The `pages/_app.tsx` file, along with the function exported as the `default export`, serves as the entry point for the entire application’s pages. Due to its role as the entry point, it can be used to set up common configurations for the web application, such as:
+- Handling errors globally using error boundaries.
+- Declaring global CSS like `reset.css`.
+- Providing data that is common to all pages.
+
+✅ If you add a `console.log()` statement inside the `render()` method of `_app.tsx` and log a message, you will see the log appear in the terminal running Next.js, not in the browser console. When you switch pages, the logging will no longer occur on the server but will be handled by the browser. This implies that initially, server-side rendering occurs, followed by client-side rendering of `_app.tsx`.
+
+### pages/_document.tsx
+
+If you create a project using `create-next-app`, the `_document.tsx` file will not exist. This indicates that the absence of `_document.tsx` does not hinder the execution of the project. Nonetheless, `_document.tsx` can be helpful in several scenarios.
+
+```js
+// @react
+import { Html, Head, Main, NextScript } from 'next/document';
+
+export default function Document() {
+  return (
+    <Html lang="en">
+      <Head />
+      <body className='body'>
+        <Main />
+        <NextScript />
+      </body>
+    </Html>
+  )
+}
+```
+
+If `_app.tsx` is where the entire application page is initialized, `_document.tsx` is where the HTML of the application is initialized. Here are some differences between them:
+- Use `_document.tsx` if you want to add DOM attributes to `<html>` or `<body>`.
+- `_app.tsx` can run on either the server or the client depending on rendering or routing, but `_document.tsx` always runs on the server. Therefore, adding event handlers like `onClick` in this file is not possible. Event handling is managed by `hydrate`, which runs on the client.
+- In Next.js, there are two `<head>` components: one provided by next/document and another from next/head. The `<head>` from next/document is used exclusively in _document.tsx, while next/head is used within pages and can include SEO information and titles. Note that `<title>` cannot be used within the `<Head>` from next/document. For a common title across the web application, use `_app.tsx`; for page-specific titles, use next/head within individual page files.
+- Data-fetching functions like `getServerSideProps` and `getStaticProps` cannot be used in _document.tsx.
+- In summary, `_app.tsx` is where you initialize Next.js and gather code related to Next.js configuration, potentially running on both the server and client. `_document.tsx` is where you add code related to the HTML structure of the Next.js site and it always runs on the server.
+
+### pages/_error.tsx
+
+```js
+// @react
+import { NextPageContent } from 'next';
+
+function Error({ statusCode }: { statusCode: number }) {
+  return (
+    <p>
+      {statusCode ? `Server Error: ${statusCode}` : 'Client Error'}
+    </p>
+  )
+}
+
+Error.getInitialProps = ({ res, err }: NextPageContext) => {
+  const statusCode = res ? res.statusCode : err ? err.statusCode : '';
+  return { statusCode }
+}
+
+export default Error
+```
+
+This error page is designed to handle errors that occur on the client side or 500 errors on the server side. If you want to appropriately handle errors that occur throughout a Next.js project, you can use this page. However, in development mode, you cannot visit this page, and if an error occurs, Next.js will display the developer error overlay. To verify that this page works correctly, you need to build and test it in production mode.
+
+### pages/404.tsx
+
+If you don't create it, you'll see the default 404 page provided by Next.js. You can create a custom 404 page with your desired style here.
+
+```js
+// @react
+export default function My404Page() {
+  return <h1>404 Page Not Found</h1>
+}
+```
+
+### pages/500.tsx
+
+This is the page for handling server-side errors. If both `_error.tsx` and `500.tsx` are present, 500.tsx will take precedence. Similarly, if neither a 500 nor an error page exists, you'll see the default page provided by Next.js.
+
+```js
+// @react
+export default function My500Page() {
+  return <h1>500 Internal Server Error</h1>
+}
+```
+
+### pages/index.tsx
+
+The pages such as `_app.tsx`, `_error.tsx`, `_document.tsx`, `404.tsx`, and `500.tsx` are managed by reserved names in Next.js. Now, we'll look at pages that developers can freely name and create. Next.js, like `react-pages`, structures its routing based on the `/pages` directory. Each page's `default export` function acts as the root component for that page.
+
+- `/pages/index.tsx`: This corresponds to the root of the website, meaning the root address such as `localhost:3000`.
+- `/pages/hello.tsx`: The filename becomes the URL path when `/pages` is omitted. So, here it is `/hello`, and you can access it at `localhost:3000/hello`.
+- `/pages/hello/world.tsx`: Accessible at `localhost:3000/hello/world`. You can set the URL according to the directory depth. Both `hello/index.tsx` and `hello.tsx` point to the same address. Choose according to your needs.
+- `/pages/hello/[greeting].tsx`: The brackets `[]` indicate that any value can be used here. In the case of `[greeting]`, the server-side code will use the value of `greeting` from the URL. For example, both `localhost:3000/hello/1` and `localhost:3000/hello/greeting` are valid and will be handled by /pages/hello/[greeting].tsx. The variable greeting will have values of 1 and greeting, respectively. If there is a defined path like `/pages/hello/world.tsx`, it takes precedence.
+- `/pages/hi/[...props].tsx`: This works similarly to the spread operator in JavaScript. All subpaths under `/hi` will be handled here, such as `localhost:3000/hi/hello`, `localhost:3000/hi/hello/world`, `localhost:3000/hi/hello/world/foo`, etc. The `[...props]` value will be an array assigned to the props variable.
+
+```js
+// @react
+// pages/hi/[...props].tsx
+
+import { useRouter } from 'next/router';
+import { useEffect} from 'react';
+import { NextPageContext } from 'next';
+
+export default function HiAll({ props: serverProps }: { props: string[] }) {
+  // get values from client
+  const {
+    query: { props },
+  } = useRouter();
+  
+  useEffect(() => {
+    console.log(props);
+    console.log(JSON.stringify(props) === JSON.stringify(serverProps)) // true
+  }, [props, serverProps]);
+  
+  return (
+    <>
+      hi{' '}
+      <ul>
+        <serverProps.map(item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+export const getServerSideProps = (context: NextPageContext) => {
+  // get values from server
+  const {
+    query: { props }, // string | string[] | undefined
+  } = context;
+  
+  return {
+    props: {
+      props,
+    },
+  }
+}
+```
+
+When accessing the above page with the following addresses, the props variable will contain the following values:
+- /hi/1: ['1']
+- /hi/1/2: ['1', '2']
+- /hi/1/2/3: ['1', '2', '3']
+- hi/my/name/is: ['my', 'name', 'is']
+
+As seen from the results, note that entering a number in the URL does not convert it to a number. Also, even if only one value is entered in the URL, keep in mind that it is not a string but an array containing that string. In other words, all addresses declared with the spread operator like `[...props]` will be stored as an array.
+
+
+### Server Routing vs Client Routing
+
+Next.js performs server-side rendering but also supports client-side routing similar to single-page applications. Firstly, Next.js supports server-side rendering and pre-rendering, so the initial page rendering is performed on the server. When navigating using next/link, it operates using client-side routing/rendering, fetching only the necessary JavaScript on the client side rather than performing server-side rendering. Next.js leverages both the advantages of server-side rendering—providing the user with a quickly viewable initial page—and the benefits of single-page applications—smooth routing transitions. To fully utilize these advantages of Next.js, follow these rules when navigating internal pages:
+- Use `<Link>` instead of `<a>`.
+- Use `router.push` instead of `window.location.push`
+
+### getServerSideProps
+
+When building with getServerSideProps, the build includes server-side runtime checks. Without getServerSideProps, the build size is slightly reduced, and the page is classified as a static page that doesn't require server-side rendering. If getServerSideProps is absent, the page is treated as one that doesn't need to run on the server, and all typeof window checks are replaced with object during the build time, allowing for tree shaking. Although Next.js is a server-side rendering framework, not all tasks occur on the server.
+
+### /pages/api/hello.ts
+
+The directory named `api` under `/pages` is where the server's API is defined. The basic routing structure follows the same rules as `pages`, with the only difference being that `/pages/api` is prefixed with `/api`. For example, `/pages/api/hello.ts` can be called using `/api/hello`, and unlike other `pages`, this address handles server requests rather than HTML requests.
+
+```js
+// @react
+// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+type Data = {
+  name: string;
+}
+
+export default function handler (
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  res.status(200).json({ name: "John Doe"})
+}
+```
+
+Just like with pages, the function exported by default will be executed. The code here obviously runs only on the server. If you write code that can only be accessed in the browser, such as `window` or `document`, it will naturally cause issues.
+
+In a typical frontend project, you might rarely need to write under `/api`, but it can be used for combining data provided by the server to use in a BFF (Backend for Frontend) form, building a complete full-stack application, or working around CORS issues.
+
+
+## Styling (CSS)
+
+### Global Style
+
+To apply global styles, such as resetting the default styles provided by browsers (commonly known as CSS Reset), you can use `_app.tsx` for your application.
+
+```js
+// @react
+import type { AppProps } from 'next/app';
+
+// global style css
+import '../styles.css';
+
+// from node_modules
+import 'normalize.css/normalize.css'
+
+export default function MyApp({ Component, pageProps }: AppProps) {
+  return <Component {...pageProps} />
+}
+```
+
+### Component-level CSS
+
+By adhering to the naming convention of `[name].module.css`, you can add CSS at the component level. This component-level CSS provides unique class names to prevent conflicts with class names in other components.
+
+```js
+// @noexec
+.alert {
+  color:red;
+  font-size: 16px;
+}
+```
+
+```js
+// @react
+./Button.module.css
+
+export function Button() {
+  return (
+    <button type='button' className={styles.alert}>
+      Warning!
+    </button>
+  )
+}
+```
+
+```html
+<head>
+  <!-- ... -->
+  <!-- create CSS file instead of style tag on production -->
+  <style>
+    .Button_alert__62GTU {
+      color: red;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<button type='button' class="Button_alert__62GTU">Warning!</button>
+```
+
+### SCSS & SASS
+
+```npm install --save-dev sass```
+
+```js
+// @react
+// 'blue' into primary var
+$primary: blue;
+
+:export {
+  primary: $primary;
+}
+import styles from './Button.module.scsss';
+
+export function Button() {
+  return (
+    <span style={{color: styles.primary}}>
+      Hello
+    </span>
+  );
+}
+```
+
+### CSS-in-JS
+
+CSS-in-JS is a styling approach where stylesheets are embedded within JavaScript. Notable libraries for this include `styled-jsx`, `styled-components`, `Emotion`, and `Linaria`. To add styles using styled-components, you can use the following code:
+- `ServerStyleSheet` is a class used to initialize styles from `styled-components` on the server. When instantiated, this class provides various functionalities to make `styled-components` work on the server.
+- `originalRenderPage` holds the value of ctx.renderPage. This separation allows for additional `styled-components` related tasks to be performed on top of the existing operations of `ctx.renderPage`.
+- In `ctx.renderPage`, alongside the original tasks, enhanceApp is defined to specify additional tasks to be performed when rendering the App. The additional task here is `sheet.collectStyles(<App {...props} />)`. `sheet.collectStyles` wraps the existing App with the `styled-components` Context API, known as `StyleSheetManager`. Essentially, it can be seen as wrapping our existing `App` with the `styled-components` Context API.
+- `const initialProps = await Document.getInitialProps(ctx)` generates the necessary `getInitialProps` when the existing `_document.tsx` performs rendering.
+- In the final return statement, in addition to the default props, it also returns the styles collected by `styled-components` within the JavaScript file. This allows the styles collected by `styled-components` to be included when _document is initially rendered during server-side rendering.
+
+```js
+// @react
+// use swc instead of babel
+// next.config.js
+/** @type { import('next').NextConfig } */
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+  compiler: {
+    styledComponents: true,
+  }
+}
+
+module.exports = nextConfig;
+```
+
+✅ If you are considering Next.js and SWC, it is advisable to use one of `styled-jsx`, `styled-components`, or `Emition`. These libraries have a relatively large user base, do not require separate Babel configuration, and allow you to benefit from the fast build times provided by SWC.
+
+
+## Applying _app.tsx
+
+`_app.tsx` is the initial entry point for all services built with Next.js. By leveraging this characteristic, you can handle tasks that need to be executed when a user first accesses the service.
+
+
+```js
+// @react
+import App, { AppContext } from 'next/app';
+import type { AppProps } from 'next/app';
+
+function MyApp({ Component, pageProps }): AppProps {
+  return (
+    <>
+      <Component {...pageProps} />
+    </>
+  );
+};
+
+MyApp.getInitialProps = async (context: AppContext) => {
+  const appProps = await App.getInitialProps(context);
+  return appProps;
+};
+
+export default MyApp;
+```
+
+The code above is an example of converting an `_app.tsx` file made with a class component into a function component. To add `getInitialProps` to `_app.tsx`, you must first execute `const appProps = await App.getInitialProps(context)` and then return that value. This code is responsible for executing and returning the `getInitialProps` from other pages, and without it, the `getInitialProps` of other pages will not execute properly.
+
+```js
+// @react
+MyApp.getInitialProps = async (conext: AppContext) => {
+  const appProps = await App.getInitialProps(context);
+  const isServer = Boolean(context.ctx.req);
+  console.log(`Requested ${context.ctx?.req?.url} from
+              \[${isServer ? 'Server' : 'Client' }\] ${context.router.pathname}`);
+  return appProps;
+}
+```
+
+When adding `getInitialProps` to the _app component, the application's execution procedure is as follows:
+
+1. First, visit a page with its own `getInitialProps`.
+> - Log: `Requested /test/GIP from [Server] /test/GIP`
+2. Visit a page with getServerSideProps using `<Link>`.
+> - Log: `Requested /_next/data/.../test/GSSP.json from [Server] /test/GSSP`
+3. Revisit the page from step 1 using `<Link>`.
+> - Log: `undefined from [Client] /test/GSSP`
+4. Revisit the page from step 2 using `<Link>`.
+> - Log: `Requested /_next/data/.../test/GSSP.json from [Server] /test/GSSP`
+
+When using `<Link/>` or router, subsequent routing works like client-side rendering. At the initial page visit in **1**, server-side rendering must be fully operational, so the entire page is requested. However, afterward, for client-side routing, even if the page has server-related logic like `getServerSideProps`, the whole page is not fetched. Instead, only the JSON result of the page's `getServerSideProps` is requested.
+
+By leveraging this characteristic, you can place content that you want to execute only during the initial access to the web service within `app.getInitialProps`.
+
+```js
+// @react
+MyApp.getInitialProps = async (context: AppContext) => {
+  const appProps = await App.getInitialProps(context);
+  const {
+    ctx: { req },
+    router: { pathname },
+  }= context;
+
+  if (
+    req &&
+    !req.url?.startsWith('/_next') &&
+    !['/500', '404', '/_error'].includes(pathname);
+  ) {
+    doSomethingOnlyOnce();
+  }
+
+  return appProps;
+}
+```
+
+`if` statement conditions:
+1. If `req` exists, it is a request coming to the server.
+2. If `req.url` does not start with /_next, it indicates that the request is not due to client-side rendering's `getServerSideProps`.
+3. If `pathname`, the access request path, is not an error page, it is likely a normal page access.
+
+If all conditions **1**, **2**, and **3** are met, it can be reasonably guaranteed that the user has initially accessed the webpage and performed the first server-side rendering. Here, you can execute tasks like verifying the `userAgent` or retrieving information that needs to be used across the entire application, such as user information.
+
+
+
+## next.config.js
+
+
+The `next.config.js` file is where you can add configurations needed to run Next.js. It allows for various settings required for executing and customizing Next.js. Although the Next.js configuration file is in JavaScript, you can leverage the `@type` syntax to get help from the pre-declared configuration type (`NextConfig`). Some commonly used configurations in practice include:
+
+- `basePath`: By default, the application is served under the `/` path of the host. Adding a string like 'docs' here will start the service at 'localhost:3000/docs'. If `basePath` is present, it will be appended to all addresses that trigger client-side rendering, so there is no need to add this `basePath` to `<Link>` or `router.push()`. However, if you use an `<a>` tag directly or `window.location.push` for routing, you need to manually add the `basePath`.
+- `swcMinify`: Indicates whether to minify the code using SWC. Starting from Next.js version 13, the default value is `true`.
+- `poweredByHeader`: Next.js provides the `X-Power-by: Next.js` information in the response header. Declaring `false` will remove this information. For security reasons, it is recommended to set this to `false` as security solutions often classify the `powered-by` header as a vulnerability.
+- `redirects`: Used to redirect specific addresses to other addresses. Regular expressions can also be used.
+```javascript
+// @react
+module.exports = {
+  redirects() {
+    return [
+      {
+        // /tag/foo => /tags/foo/pages/1
+        source: '/tag/:tag',
+        destination: '/tags/:tag/pages/1',
+        permanent: true,
+      },
+      {
+        // /tag/foo/1 => /tags/foo/pages/1
+        source: '/tag/:tag/:no',
+        destination: '/tags/:tag/pages/1',
+        permanent: true,
+      },
+      {
+        // /tag/foo/pages/something => /tags/foo/pages/1
+        source: '/tag/:tag/pages/((?!\\d).*)',
+        destination: '/tags/:tag/pages/1',
+        permanent: true,
+      }
+    ]
+  }
+}
+```
+- `reactStrictMode`: Indicates whether to enable React's strict mode. The default value is `false`, but it is recommended to set it to `true` to prepare for upcoming React updates.
+- `assetPrefix`: If you want to upload the build output from Next.js to a different CDN instead of the same host, specify the CDN address in this option.
+```javascript
+// @react
+const isProduction = process.env.NODE_ENV === 'production';
+
+module.exports = {
+  assetPrefix: isProduction ? 'https://cdn.somewhere.com' : undefined;
+}
+```
+> When the `assetPrefix` setting is enabled, static resources are assumed to be at the specified address, and requests will be made to that address. For example, the CDN resource address will change to 'https://cdn.somewhere.com/_next/static/chunks/webpack-1a2b3c5d.js'. If you want to upload static resources to a separate CDN, you can utilize this feature.

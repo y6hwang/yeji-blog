@@ -1,0 +1,207 @@
+export let metadata = {
+  title: '/js/async',
+  description:
+    '',
+};
+
+
+# 1. Single Thread JavaScript
+
+In the past, the only unit for executing programs was the **process**. A process refers to the unit of execution for a program, meaning that the state of the program is managed in memory and all tasks are handled within this single process. Each program has one process, so performing multiple complex tasks simultaneously was challenging.
+
+To address this, the concept of **thread** was introduced as smaller units of execution. A single process can create multiple threads, and threads can share memory, allowing various tasks to be performed concurrently.
+
+### Why was JavaScript designed as a single-threaded language?
+
+Multithreading offers the advantage of handling multiple concurrent tasks within a single process, but it also comes with the drawback of increased complexity in handling operations internally. Threads within the same process can access the same resources simultaneously, leading to potential concurrency issues, such as multiple modifications to the same resource, which require careful management. Additionally, unlike isolated processes, if one thread encounters a problem, other threads sharing the same resources may also simultaneously experience issues.
+
+### What does it mean that JavaScript is single-threaded?
+
+It means that the execution of JavaScript code occurs sequentially on a single thread. Essentially, a subsequent task will not begin until the current task is completed. This characteristic of JavaScript is known as **run-to-completion**. While this feature offers a significant advantage by relieving developers from having to worry about concurrency, it also means that if a task takes a long time to complete, the user might experience the webpage as being unresponsive or frozen.
+
+```js
+console.log(1);
+setTimeout(() => {
+  console.log(2);
+}, 0);
+setTimeout(() => {
+  console.log(3);
+}, 100);
+console.log(4);
+```
+
+
+# 2. Event Loop
+
+## Call Stack & Event Loop
+
+`Call Stack` is a stack in JavaScript that sequentially stores the code or functions to be executed
+
+```js
+unction bar() {
+  console.log('bar');
+}
+
+function baz() {
+  console.log('baz');
+}
+
+function foo() {
+  console.log('foo');
+  bar();
+  baz();
+}
+
+foo();
+```
+
+The above code is pushed onto and popped off the call stack roughly in the following order:
+1. Push `foo()`.
+2. Push `console.log('foo')`.
+3. Moving onto next line after **2** executed. (`foo()` still exists in stack)
+4. Push `bar()`
+5. Push `console.log('bar')`.
+6. Moving onto the next line after **5** executed. (`foo()`, `bar()` still exists in stack)
+7. Nothing left in `bar()`, pop `bar()`. (`foo()` still exists in stack)
+8. Push `baz()`.
+9. Push `console.log('baz')`.
+10. Moving onto the next line after **9** executed. (`foo()`, `baz()` still exists in stack)
+11. Nothing left in `baz()`, pop `baz()`.
+12. Nothing left in `foo()`, pop `foo()`.
+13. Call stack is empty.
+
+The **event loop** checks whether the call stack is empty. Within a single thread, the event loop monitors the call stack for any tasks that need to be executed. If there are tasks to be performed, it uses the JavaScript engine to execute them. Both "executing the code" and "checking if the call stack is empty" occur within a single thread.
+
+```js
+function bar() {
+  console.log('bar');
+}
+
+function baz() {
+  console.log('baz');
+}
+
+function foo() {
+  console.log('foo');
+  setTimeout(() => bar(), 0); // added setTimeout
+  baz();
+}
+
+foo();
+```
+
+The above code is pushed onto and popped off the call stack roughly in the following order:
+1. Push `foo()`.
+2. Push `console.log('foo')`.
+3. Moving onto next line after **2** executed. (`foo()` still exists in stack)
+4. Push `bar()`
+5. Push `console.log('bar')`.
+6. Timer event executed from **4**, pushed into task queue, and popped from call stack immediately
+7. Push `baz()`.
+8. Push `console.log('baz')`.
+9. Moving onto the next line after **9** executed. (`foo()`, `baz()` still exists in stack)
+10. Nothing left in `baz()`, pop `baz()`.
+11. Nothing left in `foo()`, pop `foo()`.
+12. Call stack is empty.
+13. Event loop checekd that call stack is empty. Task queue has a task from **4**, push `bar()`
+14. Push `console.log('bar')`.
+15. Moving onto next line after **13** executed. (`bar()` still exists)
+16. Nothing left in `bar()`, pop `bar()`.
+
+The **task queue** refers to a collection of tasks that need to be executed. The event loop manages one or more of these task queues. Contrary to its name, a task queue is not a queue data structure but resembles a set. While a queue data structure follows a FIFO (First In, First Out) order, a task queue selects the oldest task from the chosen queue that is ready to be executed. These tasks include callbacks for asynchronous functions or event handlers.
+
+The event loop's role is to continuously check if there is code running on the call stack and if there are functions waiting in the task queue. 
+
+Asynchronous functions are executed in a separate thread where the task queue is allocated, not on the main synchronous thread. It is the responsibility of the browser or Node.js to allocate and handle these tasks. Thus, while JavaScript code execution happens on a single thread, external tasks like Web APIs are executed outside JavaScript, with their callbacks entering the task queue.
+
+
+
+# 3. Task Queue & Microtask Queue
+
+The event loop has a single microtask queue, which takes precedence over the regular task queue. A prominent example of a microtask is a `Promise`. This means that `setTimeout` and `setInterval` are executed later than `Promise`.
+- **Task Queue**: `setTimeout`, `setInterval`, `setImmediate`
+- **Microtask Queue**: `process.nextTick`, `Promise`, `queueMicroTask`, `MutationObserver`
+
+```js
+function foo() {
+  console.log('foo');
+}
+
+function bar() {
+  console.log('bar');
+}
+
+function baz() {
+  console.log('baz');
+}
+
+setTimeout(() => foo(), 0);
+
+Promise.resolve().then(bar).then(baz);
+```
+
+Before executing the task queue, the microtask queue is processed first. After executing the microtask queue, **rendering** occurs. Each time a microtask queue task completes, there is an opportunity to render once.
+
+```html
+<html>
+  <body>
+    <ul>
+      <li>Sync Code: <button id="sync">0</button></li>
+      <li>Task: <button id="macrotask">0</button></li>
+      <li>Microtask: <button id="microtask">0</button></li>
+    </ul>
+    
+    <button id="macro_micro">Execute All</button>
+  </body>
+  <script>
+    const button = document.getElementById('run');
+    const sync = document.getElementById('sync');
+    const macrotask = document.getElementById('macrotask');
+    const microtask = document.getElementById('microtask');
+    const macro_micro = document.getElementById('macro_micro');
+    
+    sync.addEventListener('click', function () {
+      for (let i = 0; i <= 100000; i++) {
+        sync.innerHTML = i.toString();
+      }
+    });
+    
+    macrotask.addEventListener('click', function () {
+      for (let i = 0; i <= 100000; i++) {
+        setTimeout(() => {
+          macrotask.innerHTML = i.toString();
+        }, 0);
+      }
+    });
+    
+    microtask.addEventListener('click', function() {
+      for (let i = 0; i <= 100000; i++) {
+        queueMicrotask(() => {
+          microtask.innerHTML = i.toString();
+        });
+      }
+    });
+    
+    macro_micro.addEventListener('click', function () {
+      for (let i = 0; i <= 100000; i++ ) {
+        sync.innerHTML = i;
+        setTimeout(() => {
+          macrotask.innerHTML = i.toString();
+        }, 0);
+        queueMicrotask(() => {
+          microtask.innerHTML = i.toString();
+        });
+      }
+    })
+  </script>
+</html>
+```
+
+- Synchronous code will not trigger rendering until the operation is complete, such as counting up to 100,000. The for loop must finish before any rendering can occur, and the number 100,000 will appear all at once.
+- With the task queue(`setTimeout`), there is a brief waiting period until all the `setTimeout` callbacks are queued. You will see rendering happening sequentially from 1 to 100,000.
+- The microtask queue (`queueMicrotask`), like synchronous code, does not render at all until it has finished counting up to 100,000, after which it will render once.
+- When running everything simultaneously, only the synchronous code and the microtask queue will count up to 100,000 at once, while the task queue will render sequentially.
+
+
+
+

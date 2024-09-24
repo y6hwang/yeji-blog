@@ -1,0 +1,218 @@
+export let metadata = {
+  title: '/js/closure',
+  description:
+    '',
+};
+
+# 1. What is Closure?
+
+A closure is the combination of a function bundled together (enclosed) with references to its surrounding state (the lexical environment). In other words, a closure gives you access to an outer function's scope from an inner function. In JavaScript, closures are created every time a function is created, at function creation time.
+
+```js
+function add() {
+  const a = 10;
+  function innerAdd() {
+    const b = 20;
+    console.log(a + b);
+  }
+  innerAdd()
+}
+add();
+```
+
+
+# 2. Scope
+
+To understand closures, it was mentioned that the lexical environment is determined based on the variable scope. This scope, which defines the validity of variables, is known as scope in JavaScript. There are various types of scopes in JavaScript.
+
+## Global Scope
+
+When a variable is declared in the global scope, it can be accessed from anywhere. In a browser environment, the global object is `window`, while in a Node.js environment, it is `global`. The global scope is bound to this global object. 
+
+```js
+var global = 'global scope';
+function hello() {
+  console.log(global);
+}
+
+console.log(global); // global scope
+hello(); // global scope
+console.log(global === window.global); // true
+```
+
+## Function Scope
+
+Unlike other languages, JavaScript primarily follows function-level scope. This means that `{}` blocks do not determine the scope range.
+
+```js
+if (true) {
+ var global = 'global scope';
+}
+
+console.log(global); // global scope
+console.log(global === window.global) // true
+
+function hello() {
+  var local = 'local variable';
+  console.log(local); 
+}
+
+hello(); // local variable
+console.log(local); // Uncaught ReferenceError: local is not defined
+```
+
+```js
+var x = 10;
+function foo() {
+  var x = 100;
+  console.log(x); // 100
+  
+  function bar() {
+    var x = 1000;
+    console.log(x); // 1000
+  }
+  bar()
+}
+
+console.log(x) // 10
+foo();
+```
+
+
+# 3. Application of Closure
+
+The global scope has the advantage of allowing you to access values from anywhere. However, conversely, it also means that anyone can access and modify those values.
+
+```js
+// @noexec
+// counter can be accessed easily by window.counter
+var counter = 0;
+function handleClick() {
+  coutner++;
+}
+```
+
+```js
+function Counter() {
+  var counter = 0;
+  return {
+    increase: function() {
+      return ++counter;
+    },
+    decrease: function() {
+      return --counter;
+    },
+    counter: function() {
+      console.log('access counter!')
+      return counter;
+    },
+  }
+}
+
+var c = Counter();
+console.log(c.increase()); // 1
+console.log(c.increase()); // 2
+console.log(c.increase()); // 3
+console.log(c.decrease()); // 2
+console.log(c.counter()); // 2
+```
+
+By making changes to the code as shown, several benefits can be achieved:
+- **Encapsulation**: By not directly exposing the counter variable, you prevent users from modifying it directly and can restrict access. This allows you to perform additional tasks, such as logging, when access occurs.
+- **Controlled Updates**: By limiting updates to the counter variable through increase and
+decrease functions, you prevent indiscriminate changes.
+
+Using closures in this way helps to avoid global scope pollution and allows to expose only the information you want in the manner you desire.
+
+### Closure in React
+
+One of the most notable examples of using the principles of closures is `useState`.
+
+```js
+// @noexec
+function Component() {
+  const [state, setState] = useState();
+  
+  function handleClick() {
+    // useState call is done above,
+    // but setState keeps the most recent value (prev)
+    setState((prev) => prev + 1);
+  }
+  //...
+}
+```
+
+
+# 4. Things to keep in mind
+
+```js
+for (var i = 0; i < 5; i++) {
+  setTimeout(function() {
+    console.log(i);
+  }, i * 1000)
+}
+```
+
+The intention of the code above is to print the numbers 0 through 4 at 1-second intervals, starting from 0. However, in practice, only the 5 is logged. The reason for this is that `i` operates as a global variable.
+
+Since `var` looks at the function-level scope regardless of the `for` loop, `var i` is registered in the global scope if it is not within a function's execution context. After the `for` loop completes, when the `setTimeout`` in the task queue tries to execute, `i` has already been updated to 5 at the global level.
+
+1. Use Let
+
+```js
+for (let i = 0; i < 5; i++) {
+  setTimeout(function() {
+    console.log(i);
+  }, i * 1000)
+}
+```
+
+2. Fix Closures
+
+```js
+for (var i = 0; i < 5; i++) {
+  setTimeout(
+    (function(sec) {
+      return function() {
+        console.log(sec);
+      }
+    })(i),
+    i * 1000,
+  )
+}
+```
+
+One thing to be cautious about when using closures is that they incur additional overhead because they need to remember their declarative environment each time they are created.
+
+```js
+// @noexec
+/ regular function
+const aButton = document.getElementById('a');
+
+function heavyJob() {
+  const longArr = Array.from({length: 10000000 }, (_, i) => i + 1);
+  console.log(longArr.length);
+}
+
+aButton.addEventListener('click', heavyJob);
+```
+
+```js
+// @noexec
+// with closure...?
+const bButton = document.getElementById('b');
+
+function heavyJobWithClosure() {
+  const longArr = Array.from({length: 10000000 }, (_, i) => i + 1);
+  return function () {
+    console.log(longArr.length);
+  }
+}
+
+const innerFunc = heavyJobWithClosure();
+bButton.addEventListener('click', function () {
+  innerFunc();
+});
+```
+
+In Chrome DevTools, you can see that using closures has a significantly negative impact. For example, when you execute a function using a closure, such as `heavyJobWithClosure()`, it initializes with a large array already in memory from the start. In contrast, with a regular function, although the script execution might take a bit longer when clicked, the declaration and length calculation are completed within the scope, and thus, it does not impact memory usage as significantly.

@@ -1,0 +1,21 @@
+export let metadata = {
+  title: '/next/turbo',
+  description:
+    '',
+};
+
+
+# The Emergence of Turbopack, Webpack's Successor
+
+Recently, new libraries like Rome, SWC, and esbuild have been gaining popularity. These libraries share a common trait: they offer functionalities traditionally provided in JavaScript, but implemented in other languages like Rust or Go, resulting in significantly superior performance.
+
+SWC, in particular, is a tool offered by Vercel, the creators of Next.js. It has been officially recommended for use since it was stabilized in Next.js 13 and has been widely adopted as a replacement for Babel in many projects.
+
+In Next.js 13, Turbopack, a tool positioning itself as the successor to Webpack, was introduced. Turbopack claims to be up to 700 times faster than Webpack and up to 10 times faster than Vite. This impressive performance is attributed to its implementation in Rust, similar to the aforementioned libraries.
+
+With the release of Next.js 13.4.0, Turbopack has transitioned to beta. This means developers can now enable Turbopack in their development environment by using the command `next dev --turbo`.
+
+
+Turbopack aims to address many of the bottlenecks and inefficiencies present in traditional bundlers. It leverages Rust's performance and concurrency capabilities to offer near-instant feedback during development. This is particularly beneficial for large-scale applications where build times and hot module replacement (HMR) speed are critical.
+
+Furthermore, Turbopack is designed with a focus on incremental builds. It minimizes the amount of work required during rebuilds by only processing the files that have changed, thus optimizing the development experience.

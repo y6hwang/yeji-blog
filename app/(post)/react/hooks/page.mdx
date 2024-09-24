@@ -1,0 +1,855 @@
+export let metadata = {
+  title: '/react/hooks',
+  description:
+    '',
+};
+
+
+# 1. useState
+
+`useState` is a hook that allows you to define and manage state within a function component.
+
+```js
+// @react
+import { useState } from 'react';
+
+const [state, setState] = useState(initialState);
+```
+
+You pass the initial value of the state as an argument to `useState`. If no value is provided, the initial value is undefined. The `useState` hook returns an array, where the first element is the current state value, and the second element is a function (`setState`) that can be used to update the state.
+
+Function components execute every time they render, and values within the function are reinitialized with each execution. To maintain and use state values in this environment where functions are executed repeatedly, React utilizes closures.
+
+### Lazy Initialization
+
+```js
+// @react
+// General use of useState()
+const [count, setCount] = useState(
+  Number.parseInt(window.localStorage.getItem(cacheKey)),
+)
+
+// Lazy Initialization
+const [count, setCount] = useState(() => 
+  Number.parseInt(window.localStorage.getItem(cacheKey)),
+)
+```
+
+Passing a function to `useState()` instead of a primitive value for the initial state is known as lazy initialization. Lazy initialization is used when the initial state involves complex or heavy computations. This function is only executed when the state is initially created. When dealing with expensive operations such as accessing `localStorage` or `sessionStorage`, performing operations on arrays with methods like `map`, `filter`, or `find`, or calling functions to compute initial values, using lazy initialization with `useState()` is beneficial. Lazy initialization ensures that these heavy computations are only performed once, during the initial creation of the state, rather than on every render.
+
+# 2. useEffect
+
+`useEffect`  is a mechanism for creating side effects synchronously within a component, using various values from the application. It’s important to focus not just on when these side effects occur, but also on which state values trigger them.
+
+```js
+// @react
+function Component() {
+  // ...
+  useEffect(() => {
+    // do something
+  }, [props, state]);
+  // ...
+}
+```
+
+The `useEffect` hook takes two arguments: a function that contains the side effect to be executed, and a dependency array. `useEffect` does not use special features like JavaScript proxies, data binding, or observers to watch for value changes. Instead, it is a standard function that checks the dependency values on each render, and if any value in the dependency array has changed from its previous value, it executes the side effect. Therefore, `useEffect` can be seen as a function that executes side effects during the rendering process based on changes in state and props.
+
+### Purpose of Cleanup Function
+
+The cleanup function in `useEffect` is executed with reference to the values present when the effect was first defined, not the values after the most recent render. This means that even though the cleanup function runs after the render, it operates based on the previous values.
+
+When a component re-renders, React runs the cleanup function from the previous effect before executing the new effect. This helps to avoid issues such as multiple event handlers being added without removing the previous ones. Thus, the cleanup function acts as a way to "clean up" the previous state and avoid problems like memory leaks or redundant operations.
+
+Unlike the unmount lifecycle method in class components, which is called when a component is removed from the DOM, the cleanup function in `useEffect` is more about managing the effects of changes in state or props during re-renders, ensuring that the side effects from previous renders are properly cleaned up.
+
+### Dependency Array
+
+The dependency array in `useEffect` determines when the effect should be re-run based on changes in its dependencies. It can be configured in a few different ways:
+- Empty Array (i.e., `[]`): If you pass an empty array, React considers that there are no dependencies to compare. Therefore, the effect will run only once after the initial render and will not run again on subsequent renders. This is useful for running code that should only execute once, similar to componentDidMount in class components.
+- No Array: If you omit the dependency array entirely, the effect will run after every render. This means that the effect will execute every time the component renders, regardless of whether any specific values have changed. This is useful for cases where you want the effect to run whenever the component renders, such as for debugging or tracking renders.
+- Specific Dependencies: You can provide an array of specific values that the effect depends on. The effect will only re-run if any of the values in the dependency array change. This allows you to optimize performance by limiting when the effect is executed based on changes in specific state or props.
+
+✅ If `useEffect` without a dependency array runs on every render, isn't it just as good to not use `useEffect` at all?
+```js
+// @react
+// 1.
+function Component1() {
+  console.log('rendered');
+}
+
+// 2.
+function Component2() {
+  useEffect(() => {
+    console.log('rendered');
+  });
+}
+```
+
+The two codes have distinct differences:
+- Server-Side Rendering (SSR) Perspective: `useEffect` guarantees that the code inside it will only execute on the client side. This means you can safely use code that depends on the window object or other client-side APIs within `useEffect`.
+- Timing of Execution: `useEffect` runs after the component has been rendered, specifically after the DOM updates are applied. This is different from direct execution, which happens during the component's rendering phase. Consequently, with direct execution, the code may run on the server during SSR, which can delay the component's return. If the code being executed is heavy, it can negatively impact performance by blocking or slowing down the rendering process.
+
+✅ Points to Note When Using `useEffect`:
+-  Minimize `eslint-disable-line` and `react-hooks/exhaustive-deps` Comments:
+> This ESLint rule warns when a value used inside the `useEffect` callback function is not included in the dependency array. `useEffect` should only run in response to changes in the values included in the dependency array. Using values inside the callback function without including them in the dependency array means that the side effect might operate independently of the component's state and props. Before using an empty dependency array, ensure that the side effect really needs to operate independently of the component’s state or consider using memoization or revising where the effect is executed.
+- Name the Function Passed as the First Argument to `useEffect`:
+> If there are few `useEffect` hooks or if they are not complex, using anonymous functions is generally fine. However, as the number of `useEffect` hooks increases or their complexity grows, it becomes harder to understand what each `useEffect` does. Naming the functions can help in managing and understanding them better.
+- Avoid Large `useEffect` Hooks:
+> Large `useEffect` hooks can negatively impact application performance. If you need a large `useEffect`, it is better to split it into several smaller `useEffect` hooks with fewer dependencies. If multiple variables must be included in the dependency array, it’s advisable to pre-process and refine these dependencies using useCallback and useMemo before including them in the `useEffect`.
+- Avoid Creating Unnecessary External Functions:
+```js
+// @react
+function Component({ id: string }) {
+    const [info, setInfo] = useState<number | null>(null);
+    const controllerRef = useRef<AbortController | null>(null);
+    const fetchInformation = useCallback(async (fetchId: string) => {
+      controllerRef.current?.abort();
+      controllerRef.current = new AbortController();
+      
+      const result = await fetchInfo(fetchId, { signal: controllerRef.signal });
+      setInfo(await result.json());
+    }, []);
+    
+    useEffect(() => {
+      fetchInformation(id);
+      return () => controllerRef.current?.abort()
+    }, [id, fetchInformation]);
+    
+    return <div>{/* rendering */}</div>
+  }
+```
+> This component receives props and has a `useEffect` that makes an API call based on that information. However, declaring the function outside the `useEffect` results in unnecessary code and reduced readability.
+```js
+// @react
+function Component({ id: string }) {
+  const [info, setInfo] = useState<number | null>(null);
+  
+  useEffect(() => {
+    const controller = new AbortController();
+    
+    ;(async () => {
+      const result = await fetchInfo(id, { signal: controller.sign });
+      setInfo(await result.info);
+    })();
+    
+    return () => controller.abort();
+  }, [id]);
+  
+  return <div>{/* rendering */}</div>
+}
+```
+
+> Bringing the related function inside the `useEffect` made the code much simpler. It also reduced the dependency array and eliminated the need for useCallback, which was used to prevent infinite loops. If a side effect is to be used within `useEffect`, it is much more beneficial to define and use it internally.
+
+> ✅ Can’t we pass an asynchronous function directly as the callback argument to `useEffect`?
+
+> Consider a scenario where you have logic inside `useEffect` that updates the state based on the results. If it were possible to pass an asynchronous function directly as an argument to `useEffect`, the results could appear erratic depending on the response time of the asynchronous function. For instance, if a response based on the previous state takes 10 seconds, and a response based on the new state arrives in 1 second, the result based on the previous state might appear, which is undesirable. This issue is known as the race condition in `useEffect`.
+
+> To execute an asynchronous function, you need to declare and execute the asynchronous function inside `useEffect` or create an immediately invoked asynchronous function. However, having an asynchronous function inside `useEffect` means that the asynchronous function will be created and executed repeatedly within `useEffect`, so it's good to handle the previous asynchronous function in the cleanup function. In the case of `fetch`, you can use an `AbortController` to cancel previous requests.
+
+```js
+// @react
+useEffect(() => {
+  let ignore = false;
+  
+  async function fetchData() {
+    const response = await fetch('http://some.data.com');
+    const result = await response.json();
+    if (!ignore) {
+      setData(result);
+    }
+  }
+  
+  fetchData();
+  
+  return () => {
+    // use ignore or AbortController
+    ignore = true;
+  }
+}, []);
+```
+
+In summary, asynchronous `useEffect` can cause state race conditions and the execution order of the cleanup function cannot be guaranteed, so to ensure the developer's convenience, `useEffect` does not accept asynchronous functions as arguments.
+
+
+
+# 3. useMemo
+
+`useMemo` is a hook that stores (memoizes) the result of an expensive computation and returns the stored value. The first argument is a function that returns a value, and the second argument is an array of dependencies that the function depends on. If the values in the dependency array have not changed during rendering, `useMemo` does not re-execute the function but instead returns the previously memoized value. If the values in the dependency array have changed, it executes the function, returns the new value, and then memoizes this new value. This memoization can be applied not only to values but also to components.
+
+```js
+// @react
+function ExpensiveComponent({ value }) {
+  useEffect(() => {
+    console.log('rendering');
+  });
+  return <span>{value + 1000}</span>
+}
+
+funtion App() {
+  const [value, setValue] = useState(10);
+  const [, triggerRendering] = useState(false);
+  
+  const MemoizedComponent = useMemo(
+    () => <ExpensiveComponent value={value} />,
+    [value],
+  )
+  
+  function handleChange(e) {
+    setValue(Number(e.target.value));
+  }
+  
+  function handleClick() {
+    triggerRendering((prev) => !prev);
+  }
+  
+  return (
+    <>
+      <input value={value} onChange={handleChange} />
+      <button onClick={handleClick}>Rendering occurred!</button>
+      {MemoizedComponent}
+    </>
+  )
+}
+```
+
+You can also wrap a component with `useMemo`. However, using `React.memo` is usually more sensible. Even if you force a re-rendering with `triggerRendering`, the `MemoizedComponent` will not re-render. `MemoizedComponent` will not be recalculated as long as the value declared as its dependency does not change. By utilizing memoization like `useMemo`, you can prevent the re-execution of heavy computations, which is a significant advantage.
+
+
+
+# 4. useCallback
+
+If `useMemo` remembers a value, `useCallback` remembers the callback function passed as an argument. Simply put, `useCallback` means reusing a specific function without recreating it.
+
+```js
+// @react
+const ChildComponent = memo(({ name, value, onChange }) => {
+  // check if rendering occurs
+  useEffect(() => {
+    console.log('rendering', name);
+  });
+  
+  return (
+    <>
+      <h1> {name} {value ? 'on' : 'off' }</h1>
+      <button onClick={onChange}>toggle</button>
+    </>
+  )
+});
+
+function App() {
+  const [status1, setStatus1] = useState(false);
+  const [status2, setStatus2] = useState(false);
+  
+  const toggle1 = () => {
+    setStatus1(!status1);
+  }
+  
+  const toggle2 = () => {
+    setStatus2(!status2);
+  }
+  
+  return (
+    <>
+      <ChildComponent name="1" value={status1} onChange={toggle1} />
+      <ChildComponent name="2" value={status2} onChange={toggle2} />
+    </>
+  }
+}
+```
+
+Using memo to memoize a component but observing that all child components of the `App` component are still rendering:
+
+The code uses `memo` in `ChildComponent` to remember `name`, `value`, and `onChange` values and prevent re-rendering unless these values change. Ideally, changing one value should not affect other components, and only the clicked component should re-render. However, when any button is clicked, both the clicked and unclicked components are re-rendering. This happens because changing the state causes the `App` component to re-render, and during this process, the onChange function passed as a prop is recreated each time.
+
+To memoize the function and avoid this issue, `useCallback` is used. By passing the function as the first argument and a dependency array as the second argument, `useCallback` ensures that the function is not recreated as long as the dependencies do not change, similar to how `useMemo` works.
+
+```js
+// @react
+const ChildComponent = memo(({ name, value, onChange }) => {
+  // check if rendering occurs
+  useEffect(() => {
+    console.log('rendering', name);
+  });
+
+  return (
+    <>
+      <h1> {name} {value ? 'on' : 'off' }</h1>
+      <button onClick={onChange}>toggle</button>
+    </>
+  )
+});
+
+function App() {
+  const [status1, setStatus1] = useState(false);
+  const [status2, setStatus2] = useState(false);
+
+  const toggle1 = useCallback(
+    function toggle1() {
+      setStatus1(!status1);
+    },
+    [status1],
+  )
+
+  const toggle2 = useCallback(
+    function toggle2() {
+      setStatus2(!status2);
+    },
+    [status2],
+  )
+
+  return (
+    <>
+      <ChildComponent name="1" value={status1} onChange={toggle1} />
+      <ChildComponent name="2" value={status2} onChange={toggle2} />
+    </>
+  }
+}
+```
+
+✅ Basically, `useCallback` can be implemented using `useMemo`. The only difference between `useMemo` and `useCallback` is that `useMemo` memoizes a variable, while `useCallback` memoizes a function.
+
+```js
+// @react
+// The operation of the two functions below is the same.
+const handleClick1 = useCallback(() => {
+  setCounter((prev) => prev + 1);
+}, []);
+
+const handleClick2 = useMemo(() => {
+  return () => setCounter((prev) => prev + 1);
+}, []);
+```
+
+✅ However, since `useMemo` is used to memoize the value itself, it needs to return a function declaration in the return statement. When writing or reviewing code, this can cause confusion. Therefore, if the purpose is to memoize a function, it's better to use `useCallback`.
+
+
+
+# 5. useRef
+
+`useState` and `useRef` both store mutable state values within a component, even as rendering occurs. However, they have two major differences:
+- With `useRef`, you can access or modify the value through the current property of the returned object.
+- Changing the value in `useRef` does not trigger a re-render.
+
+If you use `useRef` to manage fixed values that do not affect rendering, you might wonder if simply declaring and managing the value outside the function would achieve the same result. However, there are a few drawbacks to this approach:
+- Persistent Value Across Renders: Declaring a value outside the component means that the value is created when the module is loaded, regardless of whether the component has been rendered or not. This can lead to unnecessary memory usage and potential side effects.
+- Shared Value Across Instances: If the component is created multiple times, all instances would share the same value because it is declared in the global scope. This can lead to issues where different instances of the component inadvertently share and alter the same value.
+- `useRef` provides a React-specific approach that addresses these problems. It ensures that the value is created only when the component is rendered and each component instance has its own separate `useRef` value, so instances do not interfere with each other.
+
+```js
+// @react
+function RefComponent() {
+  const inputRef = useRef();
+
+  console.log(inputRef.current) // undefined, since before rendering
+  
+  useEffect(() => {
+    console.log(inputRef.current) // <input type='text' />
+  }, [inputRef]);
+  
+  return <input ref={inputRef} type='text'/>
+}
+```
+
+A useful case for using `useRef` is to implement hooks like `usePrevious()` that store the previous value of `useState`, leveraging its characteristic of storing values without triggering re-renders.
+
+```js
+// @react
+function usePrevious(value) {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value;
+  }, [value]) // once value changes, store into ref
+  return ref.current;
+}
+
+function someComponent() {
+  const [counter, setCounter] = useState(0);
+  const previousCounter = usePrevious(counter);
+
+  function handleClick() {
+    setCounter((prev) => prev + 1);
+  }
+
+  // 0 (undefined)
+  // 1, 0
+  // 2, 1
+  // 3, 2
+  return (
+    <button onCLick={handleClick}>
+      {counter}, {previousCounter}
+    </button>
+  )
+}
+```
+
+
+
+# 6. useContext
+
+A React application fundamentally has a tree structure consisting of parent and child components. If you want to use data held by a parent component in its child component, it is common practice to pass it down via props. However, as the distance between the component with the data and the component needing the data increases, the code becomes more complex. This technique of continuously passing props down through nested components to the required position is called prop drilling. By using Context, you can freely provide desired values to all lower-level components without the need for explicit prop passing.
+
+```js
+// @react
+const Context = createContext<{ hello: string } | undefined>(undefined);
+
+function ParentComponent() {
+  return (
+    <>
+      <Context.Provider value={{ hello: 'react' }}>
+        <Context.Provider value={{ hello: 'javascript'}}>
+          <ChildComponent />
+        </Context.Provider>
+      </Context.Provider>
+    </>
+  )
+}
+
+function ChildComponent() {
+  const value = useContext(Context);
+  
+  return <>{ value ? value.hello : '' }</> // value = 'javascript'
+}
+```
+
+The `useContext` hook is designed to allow functional components to use the `Context` created in a parent component. By using `useContext`, you can access the values provided by `<Context.Provider />` declared somewhere in the upper components. If there are multiple `Provider`, it will retrieve the value from the nearest `Provider`.
+
+```js
+// @react
+const MyContext = createContext<{ hello: string } | undefined>(undefined);
+
+function ContextProvider({
+  children,
+  text,
+}: PropsWithChildren<{ text: string}>) {
+  return (
+    <MyContext.Provider value={{ hello: text }}>{children}</MyContext.Provider>
+  )
+}
+
+function useMyContext() {
+  const context = useContext(MyContext);
+  if (context == undefined) {
+    throw new Error('useMyContext must be used inside ContextProvider');
+  }
+  return context
+}
+
+function ChildComponent() {
+  // Since the type is clearly defined, there is no need to explicitly check for undefined.
+  // If this component is not under a Provider, an error will occur.
+  const { hello } = useMyContext();
+  
+  return <>{hello}</>;
+}
+
+function ParentComponent() {
+  return (
+    <>
+      <ContextProvider text='react'>
+        <ChildComponent />
+      </ContextProvider>
+    </>
+  )
+}
+```
+
+When using multiple `Provider` and `useContext`, especially with TypeScript, it is advisable to wrap them in a separate function as shown above. This is useful for type inference and also helps in easily identifying errors when there is no `Provider` in the upper components.
+
+### Points to Note When Using `useContext`
+
+When using `useContext` within a functional component, always keep in mind that it can make component reuse difficult. If `useContext` is declared, the component becomes dependent on the `Provider`, making it hard to reuse in different contexts. If the functional component using `useContext` is not under a `Provider`, it may behave unexpectedly. In other words, a component with `useContext` will have a dependency on a `Provider` that may not be immediately visible.
+
+If you have optimized state injection using `useContext`, be sure to observe how rendering behaves when the `Provider`'s value changes. While `useContext` allows you to use the injected state, it does not inherently help with rendering optimization.
+
+
+# 7. useReducer
+
+`useReducer` is similar to `useState` but allows for managing more complex state values according to predefined scenarios. Here are the terms used with `useReducer`:
+1. The return value is a two-element array, just like `useState`.
+> - **state**: This represents the current value held by `useReducer`. Similar to `useState`, it returns an array where the first element is this value.
+> - **dispatcher**: A function used to update the state. This is the second element returned by `useReducer`. Unlike setState in `useState`, which simply passes a value, here you pass an action. This action represents an operation that can change the state.
+2. `useReducer` requires 2 to 3 arguments, unlike `useState` which takes a single argument.
+> - **reducer**: A function defining the basic actions for `useReducer`. This is passed as the first argument to `useReducer`.
+> - **initialState**: The initial state value for `useReducer`, passed as the second argument.
+> - **init**:  An optional function used when you want to delay the creation of the initial state, similar to passing a function as an argument to `useState`. If provided, lazy initialization occurs, and the `init` function is executed with `initialState` as its argument.
+
+```js
+// @react
+// define state for useReducer
+type State = {
+  count: number
+}
+
+// Defining the type of action and the value (payload) that will cause a change in the state.
+// Does not require strict naming conventions such as type and payload, nor does it need to be an object.
+type Action = { type: 'up' | 'down' | 'reset'; payload? State }
+
+// lazy initialization function with heavy computations
+function init(count: State): State {
+  // count: Compute initial state from State
+  return count;
+}
+
+// initialState
+const initialState: State = { count : 0 };
+
+// How state will change depend on state and action
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case: 'up':
+      return { count: state.count + 1 };
+    case 'down':
+      return { count: state.count - 1 };
+    case 'reset':
+      return init(action.payload || { count: 0 });
+    default:
+      throw new Error(`Unexpected action type ${action.type}`);
+  }
+}
+
+export default function App() {
+  const [state, dispatcher] = useReducer(reducer, initialState, init);
+  
+  function handleUpButtonClick() {
+    dispatcher({ type: 'up' });
+  } 
+  
+  function handleDownButtonClick() {
+    dispatcher({ type: 'down' });
+  }
+  
+  function handleResetButtonClick() {
+    dispatcher({ type: 'reset', payload: { count: 1  });
+  }
+  
+  return (
+    <div className='App'>
+      <h1>{state.count}</h1>
+      <button onClick={handleUpButtonClick}>+</button>
+      <button onClick={handleDownButtonClick}>-</button>
+      <button onClick={handleResetButtonClick}>reset</button>
+    </div>
+  )
+}
+```
+
+
+By allowing complex state to be modified only through predefined `dispatcher`, access to the state value is limited to the component, while the detailed definitions for updating it are placed outside the component. This confines state updates to predefined dispatchers, ensuring that state changes can be quickly verified and controlled. The purpose of `useReducer` is to restrict the scenarios for changing the state and to make these changes easily trackable.
+
+For simple values like `number` or `boolean`, `useState` is usually sufficient. However, if a state needs to hold complex values or has many potential modifications, managing the state can become challenging. In such cases, `useReducer` can be more efficient, especially when grouping multiple states with similar characteristics. Using `useReducer` allows you to separate the logic of using the state from the business logic that manages it, making state management easier.
+
+The third argument, the lazy initialization function, is optional but provides the same benefits as passing a function to `useState`. Additionally, it allows for reusing the initialization logic within the `reducer` when state reinitialization is needed.
+
+✅ `useReducer` and `useState` have differences in their detailed operation and usage, but they both fundamentally manage state by using closures to encapsulate values. This ensures that the state is preserved across re-renders and can be updated predictably.
+
+
+
+# 8. useImperativeHandle
+
+### forwardRef
+
+The `ref` is an object returned by `useRef`, commonly used to access a DOM element by passing it to a React component's `ref` prop. Similar to key, `ref` is a reserved prop name in React and can be used without being explicitly declared. But what if you want to pass this `ref` from a parent component to a child component? Specifically, how can you pass a `ref` when you can't directly set it in the child's props?
+
+```js
+// @react
+const ChildComponent = forwardRef((props, ref) => {
+  useEffect(() => {
+    // { current: undefined }
+    // { current: HTMLInputElement }
+    console.log(ref);
+  }, [ref])
+  
+  return <div>Hello!</div>
+}
+
+function ParentComponent() {
+  const inputRef = useRef();
+  
+  return (
+    <>
+      <input ref={inputRef} />
+      <ChildComponent ref={inputRef} />
+    </>
+  )
+}
+```
+
+To achieve this, you can wrap the child component with forwardRef and pass the `ref` as the second argument. Then, in the parent component, you can pass the `ref` using `props.ref`. This way, `forwardRef` allows you to pass the `ref` as a prop and use it in the child component.
+
+`useImperativeHandle` is a hook that allows a child component to customize the instance value exposed to the parent through a `ref`
+
+```js
+// @react
+import React, { useRef, useImperativeHandle, forwardRef, useState } from 'react';
+
+const Input = forwardRef((props, ref) => {
+  useImperativeHandle(
+    ref,
+    () => ({
+      alert: () => alert(props.value),
+    }),
+    [props.value] // deps
+  )
+  
+  return <input ref={ref} {...props} />
+}
+
+function App() {
+  const inputRef = useRef();
+  const [text, setText] = useState('');
+  
+  function handleClick() {
+      inputRef.current.alert();
+  }
+  
+  function handleChange(e) {
+    setText(e.target.value);
+  }
+  
+  return (
+    <>
+      <Input ref={inputRef} value={text} onChange={handleChange} />
+      <button onClick={handleClick}>Focs</button>
+    </>
+  )
+}
+```
+
+Using `useImperativeHandle` allows you to customize the value exposed to the parent component through a `ref`. Originally, a `ref` would typically provide an object like `{ current: <HTMLElement> }`, where only the `HTMLElement` itself is accessible. However, with `useImperativeHandle`, you can define additional behaviors and properties on this `ref`.
+
+This means that, instead of just exposing the `HTMLElement`, you can add custom methods or properties to the `ref` object that the parent component can then interact with. This allows the parent to access not only the `HTMLElement` but also any additional keys and values you’ve set up in the child component.
+
+
+
+# 9. useLayoutEffect
+
+```js
+// @react
+function App() {
+    const [count, setCount] = useState(0);
+    
+    useEffect(() => {
+      console.log('useEffect', count);
+    }, [count]);
+    
+    useLayoutEffect(() => {
+      console.log('useLayoutEffect', count);
+    }, [count]);
+    
+    function handleClick() {
+      setCount((prev) => prev + 1);
+    }
+    
+    return (
+      <>
+        <h1>{count</h1>
+        <button onClick={handleClick}>+</button>
+      </>
+    )
+  }
+```
+
+The signature of `useLayoutEffect` is similar to `useEffect`, but it has a key difference when it runs. `useLayoutEffect` runs synchronously immediately after all DOM mutations but before the browser has had a chance to paint. This means `useLayoutEffect` can block the paint until it finishes running, making it suitable for operations that need to measure or adjust the DOM before the user sees the changes.
+1. React updates DOM
+2. Run `useLayoutEffect`
+3. Browser paints
+4. Run `useEffect`
+
+`useLayoutEffect` is particularly suited for scenarios where you need to synchronize with the DOM before the browser has a chance to paint the screen. This is crucial for tasks such as:
+- Animations: If you need to perform calculations or adjustments before rendering animations, `useLayoutEffect` ensures that the DOM is in the expected state before the animation starts.
+- Scroll Position: Adjusting or restoring scroll positions based on the DOM layout should be done before the browser paints the updates to avoid flickering or janky scrolling experiences.
+- Measuring Layouts: Any layout measurements that impact how elements are displayed should be done with `useLayoutEffect` to ensure accurate measurements before the user sees the changes.
+
+Using `useLayoutEffect` helps to create a more seamless user experience by ensuring that all necessary adjustments are made and reflected in the DOM before it is painted, avoiding visual inconsistencies and potential flicker.
+
+
+
+# 10. useDebugValue
+
+```js
+// @react
+function useDate() {
+  const date = new Date();
+  useDebugValue(date, (date) => `current time: ${date.toISOString()}`);
+  return date;
+}
+
+export default function App() {
+  const date = useDate();
+  const [counter, setCounter] = useState(0);
+  
+  function handleClick() {
+    setCounter((prev) => prev + 1);
+  }
+  
+  return (
+    <div className='App'>
+      <h1>{counter} {date.toISOString()}</h1>
+      <button onClick={handleClick}>+</button>
+    </div>
+  )
+}
+```
+
+`useDebugValue` is a hook that allows you to provide debug information about the internal state of a custom hook. By passing a formatting function as the second argument, you can ensure that the formatted value is only updated and exposed when the value changes.
+
+When using `useDebugValue`, it's important to note that it can only be executed within other hooks. If used at the component level, it will not work. Therefore, it is particularly useful for providing debugging information in libraries that offer common hooks or in large-scale web applications where you need to debug custom hooks.
+
+
+
+# Rules of Hooks
+
+1. Call Hooks at the Top Level: Hooks should be called at the top level of your React function components or custom hooks. This means you should not call hooks inside loops, conditions, or nested functions. This rule ensures that hooks are always called in the same order on every render, which is crucial for maintaining consistent behavior.
+
+2. Only Call Hooks from React Functions: Hooks can only be used in React function components or custom hooks. They cannot be called from regular JavaScript functions or class components. This restriction ensures that hooks are used in the proper context where React can manage their lifecycle and state.
+
+These rules help React maintain the order of hooks and manage their state effectively, avoiding potential bugs and inconsistencies. The ESLint rule `react-hooks/rules-of-hooks` helps enforce these rules by providing warnings and errors when they are violated.
+
+
+
+
+# Custom Hook & High Order Component
+
+## Custom Hooks
+
+Custom hooks in React are a powerful way to encapsulate and share reusable logic across components. They follow a few key rules, one of which is that their names must start with use, which is a convention that helps React identify them as hooks.
+
+```js
+// @react
+import { useEffect, useState } from 'react';
+  
+// custom hooks for making HTTP request
+function useFetch<T>(
+  url: string,
+  { method, body }: { method: string; body?: XMLHttpRequestBodyInit },
+) {
+  const [result, setResult] = useState<T | undefined>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [ok, setOk] = useState<boolean | undefined>();
+  const [status, setStatus] = useState<number | undefined>();
+  
+  useEffect(() => {
+    const abortController = new AbortController();
+    
+    ;(async () => {
+      setIsLoading(true);
+      
+      const response = await fetch(url, {
+        method,
+        body,
+        signal: abortController.signal,
+      });
+      
+      setOk(response.ok);
+      setStatus(response.status);
+      
+      if (response.ok) {
+        const apiResult = await response.json();
+        setResult(apiResult);
+      }
+      
+      setIsLoading(false);
+    })();
+    
+    return () => {
+      abortController.abort();
+    }
+  }, [url, method, body]);
+  
+  return { ok, result, isLoading, status }
+}
+
+interface Todo {
+  number;
+  number;
+  string;
+  boolean;
+}
+
+export default function App() {
+  const { isLoading, result, status, ok } = useFetch<Array<Todo>>(
+    'https:///jsonplaceholder.typicode.com/todos',
+    { method: 'GET' },
+  );
+  
+  useEffect(() => {
+    if (!isLoading) {
+      console.log('fetchResult >>', status);
+    }
+  }, [status, isLoading]);
+  
+  return (
+    <div>
+      { ok ?
+        (result || []).map(({ userId, title }, index) => {
+          <div key={index}>
+            <p>{userId}</p>
+            <p>{title}</p>
+          </div>
+        ))
+        :
+        null
+      }
+    </div>
+  )
+}
+```
+
+This code is an example of separating the logic for calling an API using `fetch` into a custom hook. If this logic were not encapsulated in a hook, you would have to declare and manage at least four common states in every component that requires API calls. Even if you optimized it with `useReducer`, you would still need `useEffect`, resulting in duplicated use of these two hooks wherever `fetch` is needed.
+
+Such complex and repetitive logic can be simplified by using a custom hook. By placing the necessary `useState` and `useEffect` logic inside the custom hook useFetch, you can easily manage repetitive logic by simply using the `useFetch` hook in the components that need it.
+
+
+## Custom Hook vs. High Order Component
+
+### When to Use Custom Hooks:
+
+If you can isolate common logic using React's built-in hooks like `useEffect` and `useState`, it is advisable to use custom hooks. Custom hooks do not directly impact rendering, making them more versatile. They provide values that developers can utilize as needed, minimizing their impact on the component and allowing developers to use them flexibly according to their requirements.
+
+```js
+// @react
+// Using custom hooks
+function HookComponent() {
+  const { loggedIn } = useLogin();
+   
+  useEffect(() => {
+    if (!loggedIn) {
+      // do something
+    }
+  }, [loggedIn]);
+};
+
+// Using HOC
+const HOCComponent = withLoginComponent(() => {
+  // do something
+});
+```
+
+A hook like `useLogin`, which holds login information, simply provides the `loggedIn` value, allowing the consuming component to handle it as desired. This makes its side effects relatively limited. In contrast, with `withLoginComponent`, a higher-order component (HOC), you won't know what it does or what it returns until you see or run the HOC. Most HOCs have logic that affects rendering, making them less predictable compared to custom hooks. Therefore, if you want to provide consistent logic or specific hook behavior across components, it's better to use custom hooks.
+
+
+### When to Use High Order Component:
+
+If an unauthenticated user tries to access a component, as shown in the previous example, it might be beneficial to hide the component at the application level and display a common component that prompts for login. Similarly, like an error boundary, if a specific error occurs, you could replace the current component with one that notifies the user about the error.
+
+```js
+// @react
+function HookComponent() {
+  const { loggedIn } = useLogin();
+ 
+  if (!loggedIn) {
+    return <LoginComponent />;
+  }
+  
+  return <>Hello</>;
+}
+
+const HOCComponent = withLoginComponent(() => {
+  // The logic needed for other components has been simplified by not having to worry about the loggedIn state. 
+  // The control based on the loggedIn state is handled by the higher-order component.
+  return <>Hello</>;
+});
+```
+
+If such a task needs to be represented with a custom hook, it would be difficult to handle the component rendering for when `loggedIn` is `false`. This is because custom hooks cannot easily affect the rendering results of the component they are used in. Additionally, this redundancy would spread throughout the application using the custom hook, so it is better to handle it with a higher-order component.

@@ -1,0 +1,220 @@
+export let metadata = {
+  title: '/js/class',
+  description:
+    '',
+};
+
+# 1. What is Class?
+
+A class is used to create objects of a specific shape repeatedly.
+
+```js
+// @noexec
+class Car {
+  // constructor
+  constructor(name) {
+    this.name = name;
+  }
+
+  // method
+  honk() {
+    console.log(this.name + ' honks!');
+  }
+
+  // static method
+  static hello() {
+    console.log('I am a car.');
+  }
+
+  // setter
+  set age(value) {
+    this.carAge = value;
+  }
+
+  // getter
+  get age() {
+    return this.carAge;
+  }
+}
+
+const myCar = new Car('car');
+myCar.honk();
+Car.hello // static method is called from class directly
+// Uncaught TypeError: myCar.hello is not a function
+// myCar.hello()
+myCar.age = 32;
+console.log(myCar.age, myCar.name) // 32, car
+```
+
+## constructor
+
+The `constructor` is a special method used to create objects.
+
+```js
+// @noexec
+class Car {
+  constructor(name) {
+    this.name = name;
+  }
+  // SyntaxError: A class may only have one constructor
+  constructor(name) {
+    this.name = name;
+  }
+}
+```
+
+```js
+// @noexec
+class Car {
+  // ok with no constructor
+}
+```
+
+## Property
+
+Properties are the values that can be defined inside a class when creating an instance. By default, an empty object is assigned inside the `constructor` during instance creation, allowing you to use the keys and values of properties.
+
+```js
+// @noexec
+class Car {
+  constructor(name) {
+    this.name = name;
+  }
+}
+const myCar = new Car('car') //
+```
+
+```js
+class Car {
+  constructor(name) {
+    this.name = name;
+  }
+
+  get firstCharacter() {
+    return this.name[0];
+  }
+
+  set firstCharacter(char) {
+    this.name = [char, ...this.name.slice(1)].join('');
+  }
+}
+
+const myCar = new Car('car');
+console.log(myCar.firstCharacter); //c
+myCar.firstCharacter = 'b';
+console.log(myCar.name); // bar
+```
+
+## Instance Method
+
+Instance methods are methods declared within a class. These instance methods are actually declared on JavaScript's prototype, so they are referred to as prototype methods.
+
+```js
+class Car {
+  constructor(name) {
+    this.name = name;
+  }
+
+  hello() {
+    console.log('hello. I am ' + this.name);
+  }
+}
+
+const myCar = new Car('car');
+myCar.hello(); // hello. I am car
+
+Object.getPrototypeOf(myCar); // { constructor: f, hello: f }
+console.log(Object.getPrototypeOf(myCar) === Car.prototype); // true
+console.log(myCar.__proto__ === Car.prototype); // true
+```
+
+## Static Method
+
+Static methods are methods that can be called by name rather than on an instance of the class.
+
+```js
+class Car {
+  static hello() {
+    console.log('hello!');
+  }
+}
+
+const myCar = new Car();
+Car.hello(); // hello!
+myCar.hello(); // Uncaught TypeError: myCar.hello is not a function
+```
+
+Static methods cannot access `this`, but they have the advantage of being usable in multiple places without needing to create an instance. Therefore, they are often used for utility functions that are needed globally within an application.
+
+`extends` is a concept used to inherit from an existing class and build upon it in a child class. This means the child class extends the functionality of the parent class by inheriting its properties and methods.
+
+```js
+class Car {
+  constructor(name) {
+    this.name = name;
+  }
+
+  honk() {
+    console.log(this.name + ' honks!');
+  }
+}
+
+class Truck extends Car {
+  constructor(name) {
+    super(name) // constructor of parent class (car) is called
+  }
+
+  load() {
+    console.log('loading...');
+  }
+}
+
+const myCar = new Car('car');
+myCar.honk(); // car honks!
+
+const myTruck = new Truck('truck');
+myTruck.honk(); // truck honks!
+myTruck.load(); // loading...
+```
+
+
+# 2. Relationship between Class and Function
+
+```js
+// @noexec
+let Car = (function () {
+  function Car(name) {
+    this.name = name;
+  }
+
+  // prototype method
+  Car.prototype.honk = function () {
+    console.log(this.name + ' honks!');
+  }
+
+  // static method
+  Car.hello = function () {
+    console.log('Hello!');
+  }
+
+  Object.defineProperty(Car, 'age', {
+    // getter
+    get: function () {
+      return this.carAge;
+    },
+    // setter
+    set: function (value) {
+      this.carAge = value;
+    },
+  });
+
+  return Car;
+});
+```
+
+The behavior of classes can be closely replicated using constructor functions. Classes act as syntactic sugar that makes JavaScript more accessible to programmers familiar with object-oriented languages. Additionally, it can be confirmed that JavaScript classes operate based on prototypes.
+
+
+# 3. Conclusion
+
+Since many of React’s older codes were created using class components, understanding class components will help you grasp how to implement lifecycle methods, why you inherit from `React.Component` or `React.PureComponent` for creating class components, and the differences between using arrow functions and regular functions for methods.

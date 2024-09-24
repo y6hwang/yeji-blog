@@ -1,0 +1,346 @@
+export let metadata = {
+  title: '/dsa/number',
+  description:
+    '',
+};
+
+# 1. Prime Numbers
+
+**Prime numbers** are natural numbers greater than 1 that have no positive divisors other than 1 and themselves. In other words, a prime number can only be divided evenly (without a remainder) by 1 and the number itself.
+
+### Sieve of Eratosthenes Principle
+1. Create a 1-dimensional list with a size equal to the range of numbers for which you want to find prime numbers.
+2. Start from 2. If the current number is not marked as removed (i.e., it's still a candidate for being a prime), mark all multiples of the current number as removed, continuing this process to the end of the list. Do not remove the first occurrence of the number itself.
+3. Repeat **2** until you have iterated through the entire list. Finally, print all the numbers that remain in the list as these are the prime numbers.
+
+## Q37. Prime Numbers
+
+```js
+// @ts
+const getPrimes = (start: number, end: number): number[] => {
+  let range: number[] = [...Array(end+1).keys()];
+    
+  for (let i = 2; i <= Math.sqrt(end); i++) {
+    if (range[i] == 0) continue;
+
+    for (let j = i+i; j <= end; j+=i) {
+      range[j] = 0;
+    }
+  }
+  return range.filter((n: number) => n > 1 && n >= start);
+}
+
+console.log(getPrimes(3, 16)); // [3, 5, 7, 11, 13]
+```
+
+## Q38. Almost Prime Numbers
+A number is called an "almost prime" if it is the Nth power (N ≥ 2) of a prime number. Write code to find number of all almost prime numbers within a given range.
+
+```js
+// @ts
+const almostPrimes = (start: number, end: number): number => {
+  let count = 0;
+  let primes: number[] = [...Array(end+1).keys()];
+
+  for (let i = 2; i <= Math.sqrt(end); i++) {
+    if (primes[i] == 0) continue;
+
+    for (let j = i+i; j <= end; j+=i) {
+      primes[j] = 0;
+    }
+  }
+  primes = primes.filter((n: number) => n > 1 && n >= start);
+
+  for (let i = 2; i <= end; i++) {
+    if (primes.includes(i)) {
+      let temp = i;
+      while (i <= end/temp) {
+        if (i >= start/temp) count++;
+        temp = temp * i;
+      }
+    }
+  }
+  return count;
+}
+
+console.log(almostPrimes(1, 1000))
+```
+
+## Q39. Palindrome
+
+Find the smallest number that is bigger or equal to N (`1 <= N <= 1,000,000`) and both a prime number and a palindrome
+
+```js
+// @ts
+const MAX = 1000000;
+const palindromePrime = (N: number): number => {
+  let primes = [...Array(MAX+1).keys()];
+  for (let i = 2; i <= Math.sqrt(MAX); i++) {
+    if (primes[i] == 0) continue;
+    for (let j = i+i; j <= MAX; j+=i) primes[j] = 0;
+  }
+  primes = primes.filter((n) => n > 1 && n >= N);
+  
+  for (let prime of primes) {
+    let sPrime = prime.toString();
+    let isPalindrome = true;
+    for (let i = 0; i < Math.floor(sPrime.length/2); i++) {
+      if (sPrime[i] !== sPrime[sPrime.length-1-i]) {
+        isPalindrome = false;
+        break;
+      }
+    }
+    if (isPalindrome) return prime;
+  }
+  return -1;
+}
+
+console.log(palindromePrime(31)); // 101
+```
+
+## Q40. Finding Non-Square Numbers
+Let's define a "non-square number" as a number X that cannot be evenly divided by any perfect square greater than 1. A perfect square is a number that is the square of an integer. Given `min` and `max`, write code to find how many "non-square numbers" exist between `min` (inclusive) and `max` (inclusive).
+
+```js
+// @ts
+const nonSquareNumber = (min: number, max: number): number => {
+  let check: boolean[] = new Array(max-min+1).fill(false);
+
+  for (let i = 2; i <= Math.sqrt(max); i++) {
+    const pow = i*i;
+    const start = min%pow ? Math.floor(min/pow)+1 : Math.floor(min/pow);
+    for (let j = start; j <= Math.floor(max/pow); j++) {
+      check[Math.floor((j*pow) - min)] = true;
+    }
+  }
+  return check.filter((c) => !c).length;
+}
+
+console.log(nonSquareNumber(1, 10)); // 7
+```
+
+
+# 2. Euler's Totient Function
+
+**Euler's Totient Function (P[N])** is defined as the number of natural numbers from 1 to N that are relatively prime to N.
+
+### Principle of Euler's Totient Function:
+1. Create a list with a size equal to the range for which you want to calculate the Euler's Totient function and initialize each list element with its own index value.
+2. Starting from 2, if the value in the list at the current index is equal to the index itself (indicating that it is a prime number), traverse through the list and for each multiple of the current number (K), perform the operation `P[i] = P[i] - P[i]/K` where `i` is a multiple of K.
+3. Repeat **2** until you have processed the entire list, completing the calculation of the Euler's Totient function.
+
+## Q41. Euler's Totient Function
+
+```js
+// @ts
+const coprime = (n: number): number => {
+  let result = n;
+    
+  for (let p = 2; p <= Math.sqrt(n); p++) {
+    if (n % p == 0) { // check if i is coprime
+      result -= result / p; 
+      while (n % p == 0) n /= p // 2^x*y => y
+    }
+  }
+  
+  if (n > 1) result -= result / n;
+  
+  return result;
+
+}
+
+console.log(coprime(1)); // 1
+console.log(coprime(5)); // 4
+console.log(coprime(10)); // 4
+console.log(coprime(45)); // 24
+console.log(coprime(99)); // 60
+```
+
+# 3. Euclidean Algorithm
+
+The Euclidean algorithm is a method for finding the greatest common divisor (GCD) of two numbers.
+
+### The Euclidean algorithm using the MOD operation:
+1. Perform the MOD operation by dividing the larger number by the smaller number.
+2. Perform the MOD operation again using the smaller number from the previous step and the remainder from the MOD operation.
+3. Repeat **2** until the remainder becomes 0. The smaller number at that moment is selected as the greatest common divisor.
+
+## Q42. Least Common Multiple
+
+Given two natural numbers A and B, a natural number that is a multiple of both A and B is called a common multiple of A and B. Write code to find the smallest of these common multiples.
+```js
+// @ts
+const lcm = (a: number, b: number): number => {
+  const gcd = (l: number, s: number): number => {
+    if (s == 0) return l;
+    return gcd(s, l % s);
+  }
+  const large = a < b ? b : a;
+  const small = a < b ? a : b;
+  return a * b / gcd(a,b);
+}
+
+console.log(lcm(1, 45000)); // 45000
+console.log(lcm(6, 10)); // 30
+console.log(lcm(13, 17)); // 221
+```
+
+## Q43. Greatest Common Divisor
+
+A and B represent the number of ones that make up the natural numbers. Write code to find the greatest common divisor (GCD) the two numbers.
+
+```js
+// @ts
+const gcd = (a: number, b: number): number => {
+  let large = a < b ? b : a;
+  let small = a < b ? a : b;
+  let gcd = small;
+
+  while (small) {
+    const temp = small;
+    small = large % small;
+    large = temp;
+  }
+
+  return parseInt("1".repeat(large))
+}
+
+console.log(gcd(3, 4)); // 1
+console.log(gcd(3, 6)); // 111
+console.log(gcd(5000000000, 5000000002)); // 11
+```
+
+## Q43. Making a Cocktail
+
+The "august14" is the most delicious cocktail in the world. Although the exact method for making this cocktail is unknown, the N ingredients used in it are disclosed. The ratios for N-1 pairs of ingredients are known, and you can use these ratios to determine the proportions of all the ingredients in the cocktail. Given the ratios for N-1 pairs of ingredients, write code to find the amount of each ingredient needed to make the cocktail that satisfies the following conditions:
+
+- The total mass of all required ingredients must be minimized.
+- The amount of each ingredient used must be an integer, and the total mass must be greater than zero.
+- The ratios are given in the format [a,b,p,q], which means the ratio of the mass of ingredient a to the mass of ingredient b is p/q.
+
+```js
+// @ts
+const august14 = (ingredients: number[][]): number[] => {
+  const gcd = (a: number, b: number): number => {
+    if (b == 0) return a;
+    else return gcd(b, a % b);
+  }
+  
+  let map = new Map();
+  let visited = new Array(ingredients.length).fill(false);
+  let nodes = new Array(ingredients.length).fill(0);
+  
+  const dfs = (node: number): void => {
+    visited[node] = true;
+    for (let i of map.get(node)) {
+      let next = i[0];
+      if (!visited[next]) {
+          nodes[next] = nodes[node] * i[2]/i[1]
+          dfs(next); 
+      }
+    }
+  }
+  
+  let lcm = 1;
+  for (let i = 0; i < ingredients.length; i++) {
+    const [a, b, p, q] = ingredients[i];
+    if (map.has(a)) map.get(a).push([b,p,q]);
+    else map.set(a, [[b, p, q]]);
+    if (map.has(b)) map.get(b).push([a,q,p]);
+    else map.set(b, [[a, q, p]]);
+    lcm *= Math.floor(p * q / gcd(p, q));
+  }
+
+  nodes[0] = lcm;
+  dfs(0);
+  let mgcd = nodes[0];
+
+  for (let i = 1; i < ingredients.length; i++) mgcd = gcd(mgcd, nodes[i]);
+  
+  return nodes.map((n) => n / mgcd);
+}
+
+const ingredients = [
+  [4, 0, 1, 1],
+  [4, 1, 3, 1],
+  [4, 2, 5, 1],
+  [4, 3, 7, 1]
+]
+console.log(august14(ingredients));
+```
+
+
+# 4. Extended Euclidean Algorithm
+
+If the purpose of the Euclidean algorithm is to find the greatest common divisor (GCD) of two numbers, the purpose of the extended Euclidean algorithm is to find the solution to an equation.
+
+```js
+// @noexec
+// a, b, c, x, y are integers
+ax + by = c
+```
+
+### Principles of Extended Euclidean Algorithm
+
+When given the equation `5x + 9y = 2`, let's find the integer values of `x` and `y` that satisfy this equation.
+
+1. First, we apply the fact that the smallest value of `c` for which `5x + 9y` has integer solutions is `gcd(5, 9)`. Since `gcd(5, 9) = 1`, we rewrite the equation as `5x + 9y = 1` and proceed to the next step.
+2. We repeatedly apply the Euclidean algorithm to `a` and `b`, storing the quotients and remainders. The process stops when the remainder becomes 0.
+
+| Euclidean Algorithm | remainder | quotient |
+| ------------------- | --------- | -------- |
+| 5 % 9 = 5 | 5 | 0 |
+| 9 % 5 = 4 | 4 | 1 |
+| 5 % 4 = 1 | 1 | 1 |
+| 4 % 1 = 0 | 0 | 4 |
+
+3. Using the remainders and quotients obtained through the iterations, we work backwards, calculating `x = y'` and `y = x' - y' * q`. Here, `x'` and `y'` represent the previous values of `x` and `y`, and `q` represents the current quotient. Since there are no initial values for `x` and `y`, we start with `1` and `0` and proceed with the reverse calculation.
+
+| remainder | quotient | x=y', y=x'-y'*q reverse calculation |
+| --------- | -------- | ----------------------------------- |
+| 5 | 0 | X = 2, Y = -1 - (2 * 0) = -1 |
+| 4 | 1 | X = -1, Y = 1 - (-1 * 1) = 2 |
+| 1 | 1 | X = 1, Y = 0 - (1 * 1) = -1 |
+| 0 | 4 | X = 0, Y = 1 - (0 * 4) = 1 |
+
+4. The final values of `x` and `y` obtained through this recursive process will satisfy the equation `ax + by = gcd(a, b)`. Assuming `c/gcd(a, b) = K`, the solution to the original equation can be found as `Kx` and `Ky`. In step 3, we found `x = 2` and `y = -1`. With `c = 2` and `gcd = 1`, `K = 2/1 = 2`. Substituting this `K` value into the original `x = 2` and `y = -1` values, the solution to the original equation becomes `x = 4` and `y = -2`.
+
+
+## Ax + By = C
+
+```js
+// @ts
+const solveEq = (a: number, b: number, c: number): void => {
+  let rqList: number[][] = [];
+  const getGCD = (a: number, b: number) => {
+    if (b == 0) return a;
+    const remainder = a % b;
+    const quotient = Math.floor(a / b);
+    rqList.push([remainder, quotient]);
+    return getGCD(b, remainder);
+  }
+  
+  const gcd = getGCD(a, b);
+  const K = c / gcd;
+  if (K % 1 !== 0) { // if c is not a multiple of gcd
+    console.log('no such integer solution');
+    return;
+  }
+
+  let X = 1;
+  let Y = 0;
+  while (rqList.length) {
+      const [r, q] = rqList.pop();
+      const tempX = Y;
+      const tempY = X - Y * q;
+      X = tempX;
+      Y = tempY;
+  }
+  console.log(`${a}(${K*X}) + ${b}({${K*Y}) = ${c}`);
+}
+
+solveEq(5, 9, 2); // 4, -2
+solveEq(1, 2, 3); // 3, 0
+solveEq(3, 4, 5); // -5, 5
+solveEq(6, 8, 3); // no such integer solution
+```

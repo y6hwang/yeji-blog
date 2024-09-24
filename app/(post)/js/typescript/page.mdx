@@ -1,0 +1,248 @@
+export let metadata = {
+  title: '/js/react',
+  description:
+    '',
+};
+
+
+# 1. What is TypeScript?
+
+```js
+// @ts
+function test(a: number, b: number) {
+return a / b;
+}
+
+console.log(test(4,2));
+```
+
+TypeScript allows you to set types for variables, so potential errors in the code can be identified at build time rather than at runtime. As a superset of JavaScript, TypeScript makes it easy to handle type-related tasks that were previously difficult, such as function return types, arrays, and enums.
+
+Ultimately, TypeScript files are compiled into JavaScript, which is then executed in runtime environments like browsers or Node.js. You can use a [playground](https://www.typescriptlang.org/play) to see how TypeScript code is converted into JavaScript code.
+
+
+
+# 2. TypeScript for React
+
+## Use `unknown` instead of `any`
+
+Using `any` is essentially equivalent to discarding all the benefits of static typing that TypeScript offers.
+
+```js
+// @ts noexec
+function doSomething(callback: any) {
+  callback();
+}
+doSomething(1);
+```
+
+If you inevitably cannot determine the type yet, it is better to use `unknown`. `unknown` is a top type that can hold any value, but unlike `any`, it cannot be used directly. To use a variable of type `unknown`, type narrowing is required.
+
+The opposite of the top type `unknown` is the bottom type `never`, which indicates that no value can ever be of this type.
+
+```js
+// @ts noexec
+type what = string & number; // never
+type what2 = ('hello' | 'hi') & 'react'; // never
+```
+
+✅ When declaring a class component in TypeScript where there are no props but there is a state, you can use it to indicate that the component does not accept any props.
+
+```js
+// @react
+type Props = Record<string, never>;
+type State = {
+    counter: 0
+};
+
+class SampleComponent extends React.Component<Props, State> {
+    constructor(props: Props) {
+      super(props)
+      this.state = {
+        counter: 0,
+      }
+    }
+}
+
+export default function App() {
+  return (
+    <>
+      {/* OK */}
+      <SampleComponent />
+      {/* Type 'string' is not assignable to type 'never' */}
+      <SampleComponent hello='world' />
+    </>
+  )
+}
+```
+
+## Use Type Guard
+
+1. `instanceof` & `typeof`
+
+```js
+// @ts noexec
+class UnAuthorizedError extends Error {
+  constructor() {
+    super()
+  }
+  
+  get message() {
+    return 'Authorization failed.'
+  }
+}
+
+async function fetchSomething() {
+  try {
+    const response = await fetch('/api/something');
+    return await response.json();
+  } catch (e) {
+    // e unknown
+    if (e instanceof UnAuthorizedError) {
+      // do something
+    }
+    throw e;
+  }
+}
+```
+
+```js
+// @ts
+function logging(value: string | undefined) {
+  if (typeof value == 'string') {
+    console.log(value);
+  }
+  if (typeof value == 'undefined') {
+    // nothing to do
+    return
+  }
+}
+
+logging('hello world');
+logging(3);
+```
+
+2. `in`
+
+```js
+// @ts
+interface Student {
+  age: number;  
+  score: number;
+}
+
+interface Teacher {
+  name: string;
+}
+
+function doSchool(person: Student | Teacher) {
+  if ('age' in person) { // person is Student
+    console.log(person.age, person.score);
+  }
+  
+  if ('name' in person) { // person is Teacher
+    console.log(person.name);
+  }
+}
+
+doSchool({ age: 13, score: 90 });
+doSchool({ name: 'John Doe' });
+```
+
+## Generic
+
+Generic is a tool that allows a function or class to handle various types instead of a single type. By using generics, you can declare a single generic component for tasks that are similar but differ only in type, thereby writing more concise code.
+
+```js
+// @ts
+function getFirstAndLast(list: unknown[]) {
+  return [list[0], list[list.length - 1]]
+}
+
+const [first, last] = getFirstAndLast([1,2,3,4,5]);
+console.log(typeof first); // unknown
+```
+
+```js
+// @ts
+// T generic
+function getFirstAndLast<T>(list: T[]): [T, T] {
+  return [list[0], list[list.length - 1]]
+}
+
+const [first, last] = getFirstAndLast([1,2,3,4,5]);
+console.log(typeof first); // number
+```
+
+```js
+// @ts
+// eg. useState
+function multipleGeneric<First, Last>(a1: First, a2: Last): [First, Last] {
+  return [a1, a2];
+}
+
+const [a,b] = multipleGeneric('true', true);
+console.log(typeof a); // string;
+console.log(typeof b); // boolean
+```
+
+## Index Signature
+
+```js
+// @ts
+type Hello = {
+  [key:string]: string; // index signature
+}
+
+const hello: Hello = {
+  hello: 'hello',
+  hi: 'hi',
+}
+
+console.log(hello['hi']); // hi
+console.log(hello['bye']); // undefined
+```
+
+By using `Record<Key, Value>`, you can assign specific keys and values to an object's type. Additionally, using index signatures allows you to narrow down the object to a desired shape as much as possible.
+
+```js
+// @ts noexec
+// use Record
+type Hello = Record<'hello' | 'hi', string>;
+
+// use type
+type Hello2 = { [key in 'hello' | 'hi']: string };
+
+const hello: Hello = {
+  hello: 'hello',
+  hi: 'hi',
+}
+
+// Object.keys return string[] and string cannot access index key of hello
+// method1. use 'as' to assert type
+(Object.keys(hello) as Array<keyof Hello>).map((key) => {
+  const value = hello[key];
+  return value;
+});
+
+// method2. create type guard function
+function keysOf<T extends Object>(obj: T): Array<keyof T> {
+  return Array.from(Object.keys(obj)) as Array<keyof T>
+}
+
+keysOf(hello).map(key) => {
+  const value = hello[key]
+  return value;
+}
+
+// method3. assert type of key
+Object.keys(hello).map((key) => {
+  const value = hello[key as keyof Hello];
+  return value;
+})
+```
+
+
+
+
+

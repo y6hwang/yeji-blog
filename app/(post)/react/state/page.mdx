@@ -1,0 +1,485 @@
+export let metadata = {
+  title: '/react/state',
+  description:
+    'Introduce the necessity of state management libraries and how a recently popular state management library works.',
+};
+
+
+# Why is State Management Necessary?
+
+In web application development, the term "state" commonly refers to a value that holds a specific meaning and can change continuously according to the application's scenario. Elements that can be classified as state in a web application include:
+
+- **UI:** In the context of web applications, state typically refers to the current value of any interactive element. Examples include dark/light mode, various inputs like radio buttons, and the visibility of notification pop-ups. There are many types of states related to UI.
+- **URL:** The URL managed by the browser also contains state information that we may need to reference. For instance, in a URL like `https://www.airbnb.co.kr/rooms/123456?adults=2`, the `roomId = 123456` and `adults=2` are states that change based on the user's routing.
+- **Form:** Forms also have states, such as whether they are currently loading (loading), whether they have been submitted (submit), whether they are inaccessible (disabled), or whether the values are valid (validation).
+- **Server-Fetched Data:** Data fetched from the server via client requests can also be considered state. A common example is the data retrieved through an API request.
+
+As web services offer increasingly diverse features, the amount of state that needs to be managed within the web application has also grown proportionally. In the past, when it was sufficient to simply display the content requested from the server, there were few elements that could be classified as state. However, we have now entered an era where we must continuously think about how to effectively manage the growing amount of state.
+
+If we consider only the concept of "managing state," it might not seem particularly difficult; it could simply be a matter of handling many tasks. But imagine an application with a variety of states that need to be managed comprehensively. Each state must trigger the appropriate UI for various elements. Should the state be stored in global variables? Should a separate closure be created? If so, how can the valid scope of that state be restricted? How will child components, which need to change based on state changes, detect these changes? As state changes occur, how can all elements be updated instantly without causing a situation where different outcomes are displayed to the user based on a single state (i.e., tearing) in the application?
+
+It is essential to think about a model that can manage state efficiently while ensuring that the parts of the application that rely on state can respond quickly.
+
+
+### History of State Management in React
+
+## Flux Pattern
+
+As web applications grew larger and the amount of state (data) increased, it became extremely difficult to track and understand where and how certain events caused changes in the state. The Facebook team identified the root cause of this problem as bidirectional data binding. They proposed changing the data flow to be unidirectional instead of bidirectional, which marked the beginning of the Flux pattern.
+
+- **Action:** An action represents a task to be processed and the data to be included when that action is triggered. The action type and data are defined separately and sent to the dispatcher.
+- **Dispatcher:** The dispatcher is responsible for sending actions to the store. It sends the action's type and data, defined earlier, to the store in the form of a callback function.
+- **Store:** The store holds the actual values based on the state and contains methods to modify the state. It defines how to modify the state based on the type of action received.
+- **View:** The view corresponds to the React components and is responsible for rendering the UI using the data created in the store. The view can also initiate updates to the state based on user input or actions. In this case, the view calls actions to trigger these updates.
+
+## Redux
+
+Redux was one of the libraries created to implement the Flux architecture. One notable aspect of Redux is that it incorporated the Elm architecture. The three core concepts of the Elm architecture are:
+1. **Model:** Represents the application's state.
+2. **View:** Refers to the HTML that represents the model.
+3. **Update:** Refers to the way in which the model is modified.
+
+Like Flux, Elm also categorizes data flow into three parts and enforces unidirectional data flow to maintain stable state management in web applications. Redux was written under the influence of this Elm architecture.
+
+Redux stores a single state object in the store and performs updates by dispatching actions that modify this object. These updates are performed using reducer functions, which return an entirely new copy of the web application's state after execution, propagating this newly created state throughout the application.
+
+By using a single global state object to propagate state to lower-level components, Redux solved the so-called "prop drilling" problem, where props had to be passed down deeply through multiple levels of components. Any component that needed access to the store could simply use `connect` to access it directly.
+
+However, Redux was not always convenient. Even to change a single piece of state, there were many steps involved. You had to declare the type of action, create an action creator function, and also set up the dispatcher and selector. You also had to define how the new state would be handled within the existing reducer or whether a new one needed to be created. Nowadays, many of these processes have been simplified.
+
+### ContextAPI & useContext
+
+The React team introduced a new Context API in React 16.3, allowing global state to be injected into lower-level components. With the Context API, you can use the state provided by the Context Provider wherever you want without passing it down through props.
+
+```js
+// @react
+class MyComponent extends React.Component {
+  static childContextTypes = {
+    name: PropTypes.string,
+    age: PropTypes.number,
+  };
+
+  getChildContext() {
+    return {
+      name: 'foo',
+      age: 30,
+    }
+  }
+
+  render() {
+    return <ChildComponent />
+  }
+}
+
+function ChildComponent(props, context) {
+  return (
+    <div>
+      <p>Name: {context.name}</p>
+      <p>Age: {context.age}</p>
+    </div>
+  )
+}
+
+ChildComponent.contextTypes = {
+  name: PropTypes.string,
+  age: PropTypes.number,
+}
+```
+
+However, this approach has some issues. First, when the parent component renders, `getChildContext` is also called, and `shouldComponentUpdate` always returns `true`, causing unnecessary re-renders. Additionally, to use `getChildContext`, you need to accept context as an argument, which increases the coupling between components. The new Context API was released to address these drawbacks.
+
+```js
+// @react
+type Counter = {
+  count: number
+}
+
+const CounterContext = createContext<Counter | undefined>(undefined)
+
+class CounterComponent extends Component {
+  render() {
+    return (
+      <CounterContext.Consumer>
+        {(state) => <p>{state?.count}</p>}
+      </CounterContext.Consumer>
+    )
+  }
+}
+
+class DummyParent extends Component {
+  render() {
+    return (
+      <>
+        <CounterComponent />
+      </>
+    )
+  }
+}
+
+export default class MyApp extends Component<{}, Counter> {
+  state = { count : 0 };
+
+  componentDidMount() {
+    this.setState({ count: 1});
+  }
+
+  handleClick = () => {
+    this.setState((state) => ({ count: state.count + 1 }));
+  }
+
+  render() {
+    return (
+      <CounterContext.Provider value={this.state}>
+        <button onClick={this.handleClick}>+</button>
+        <DummyParent />
+      </CounterContext.Provider>
+    )
+  }
+}
+```
+
+It's important to note that the Context API is a tool for dependency injection, not state management, and it does not prevent unnecessary re-renders. Therefore, caution is required when using it.
+
+
+## The Birth of Hooks, and React Query & SWR
+
+The Hooks API provided many features that allowed function components, which were previously used in a limited way to declare stateless components, to surpass class components in popularity. One of the most notable changes is that it made state easily reusable.
+
+```js
+// @react
+function useCounter() {
+  const [count, setCounter] = useState(0);
+
+  function increase() {
+    setCounter((prev) => prev + 1);
+  }
+
+  return { count, increase }
+}
+```
+
+With the introduction of hooks and state, new methods of state management emerged, such as React Query and SWR. Both libraries are specialized in managing the fetching of external data, and since they handle the state of API calls, they can be considered state management libraries specifically tailored for HTTP requests.
+
+```js
+// @react
+import React from 'react';
+import useSWR from 'swr';
+
+const fetcher = (url) => fetch(rul).then((res) => res.json());
+
+export default function App() {
+  const { data, err } = useSWR(
+    'https://api.github.com/repos/vercel/swr',
+    fetcher,
+  );
+
+  if (error) return 'An error has occurred.';
+  if (!data) return 'Loading';
+
+  return (
+    <div>
+      <p>{JSON.stringify(data)}</p>
+    </div>
+  )
+}
+```
+
+In `useSWR`, the first argument is the API endpoint to be queried, and the second argument is the fetch function used for the query. The API endpoint, which is the first argument, also serves as a key. If the same key is used elsewhere, it will not trigger a new fetch; instead, `useSWR` will utilize the cached value it manages. Although `SWR` and `React Query` are used for more specific purposes compared to traditional state management libraries and have a different approach, they can certainly be considered a type of state management library. In practice, using these libraries in an application often results in a significant reduction in the amount of state management code.
+
+
+## Recoil, Zustand, Jotai, Valtio
+
+SWR and React Query are specialized for managing HTTP requests and data fetching. However, more general-purpose state management libraries have evolved to address a broader range of use cases.
+
+```js
+// @react noexec
+// Recoil
+const counter = atom({ key: 'count', default: 0 });
+const todoList = useRecoilValue(counter);
+
+// Jotai
+const countAtom = atom(0);
+const [count, setCount] = useAtom(countAtom);
+
+// Zustand
+const useCounterStore = create((set) => ({
+  count: 0,
+  increase: () => set((state) => ({ count: state.count + 1})),
+}));
+
+// Valtio
+const state = proxy({ count: 0 });
+const snap = useSnapshot(state);
+state.count++;
+```
+
+Many of the new state management libraries emerging these days differ from traditional libraries like Redux in that they efficiently manage small pieces of state using hooks. If you visit the repositories for Recoil, Jotai, Zustand, or Valtio, you will see that they all require React version 16.8 or higher as a peer dependency. While Redux and MobX can also access state via hooks if you install `react-redux` or `mobx-react-lite`, the libraries mentioned above are designed to integrate with React from the start, so you don't need to install additional libraries.
+
+This shift moves away from the global state management paradigm that was a common criticism of older libraries, allowing developers to manage state locally as needed. Additionally, by supporting hooks, these libraries offer the advantage of being easily usable in function components.
+
+
+# State Management by React Hooks
+
+## The Most Basic Method: useState & useReducer
+
+```js
+// @react
+function useCounter(initCount: number = 0) {
+  const [counter, setCounter] = useState(initCount);
+
+  function inc() {
+    setCounter((prev) => prev + 1);
+  }
+
+  return { counter, inc }
+}
+
+function Counter1() {
+  const { counter, inc } = useCounter();
+
+  return (
+    <>
+      <h3>Counter1: {counter}</h3>
+      <button onClick={inc}>+</button>
+    </>
+  )
+}
+
+function Counter2() {
+  const { counter, inc } = useCounter();
+
+  return (
+    <>
+      <h3>Counter2: {counter}</h3>
+      <button onClick={inc}>+</button>
+    </>
+  )
+}
+```
+
+As in the example code, function components using `useCounter` can manage their own `counter` variables and easily utilize functionality to increment the number by 1 without duplicating logic. 
+
+Without the `useCounter` hook, each component requiring this functionality would have to implement it in a similar way, which could become cumbersome, especially if the hook’s internal state management or scenarios for changing state become complex. The advantage of isolating code within a hook becomes even more pronounced in such cases. Custom hooks based on React hooks offer the benefit of easy reuse in any function component.
+
+Similarly, the `useReducer` hook, which is akin to `useState`, is also used for managing local state.
+
+```js
+// @react
+// Implement useState with useReducer
+type Initializer<T> = T extends any ? T | ((prev: T) => T) : never;
+
+function useStateWithUseReducer<T>(initialState: T) {
+  const [state, dispatch] = useReducer(
+    (prev: T, action: Initializer<T>) => 
+      typeof action === 'function' ? action(prev) : acton,
+    initialState,
+  )
+
+  return [state, dispatch];
+}
+```
+
+Both `useState` and `useReducer` are designed for managing local state with only slight differences in implementation. However, when developing actual applications, you may find that `useState` and `useReducer` do not address all the needs and issues of state management. The limitations of custom hooks based on `useState` and `useReducer` are clear. Each time a hook is used, it is initialized per component, which means each component ends up having different states. In the example above, the `counter` is re-initialized every time `useCounter` is declared, ultimately leading to state fragmentation across components. This basic state management based on `useState` is referred to as local state, and this local state is limited to being valid only within the component itself.
+
+
+## Breaking Out of Local State Limitations
+
+To ensure that state referenced outside a function naturally triggers rendering, the following conditions must be met:
+
+1. **State Location**: The state does not necessarily need to be in `window` or `global`, but it must be located somewhere outside the component where multiple components can share it.
+
+2. **State Awareness**: Components using this external state must be able to detect changes, and they should re-render based on the latest state value whenever the state changes. This detection must work uniformly across all components that reference or modify the state.
+
+3. **Object State**: When the state is an object rather than a primitive value, changes to parts of the object that are not being monitored should not trigger re-rendering. For example, if the state is `{ a: 1, b: 2 }`, updating `a` to `2` should not cause a component that only references `b` to re-render.
+
+
+Using `useSubscription` allows you to fetch and use external data while ensuring that re-rendering occurs correctly.
+
+```js
+// @react
+// useSubscription Hook
+function Counter() {
+  const subscription = useMemo(
+    () => ({
+      getCurrentValue: () => store.get(),
+      subscribe: (callback: () => void) => {
+        const unsubscribe = store.subscribe(callback);
+        return () => unsubscribe();
+      },
+    }),
+    [].
+  )
+
+  const value = useSubscription(subscription);
+
+  return <>{JSON.stringify(value)}</>
+}
+```
+
+# Examining State Management Libraries: Recoil, Jotai, Zustand
+
+Recoil and Jotai focus on efficiently managing small states based on Context, Providers, and hooks. On the other hand, Zustand is a library that manages state based on a single large store, similar to Redux. Unlike Recoil and Jotai, this single large store is created using the store's own closures rather than Context. When the state of this store changes, it notifies the components subscribing to this state by propagating the changes and triggering re-rendering.
+
+## Recoil
+
+### RecoilRoot
+
+```js
+// @react
+export default function App() {
+  return <RecoilRoot> {/* some components */}</RecoilRoot>
+}
+```
+
+The general structure of `RecoilRoot` is as follows:
+
+- **State Storage**: Recoil state values are stored in a Context created by `RecoilRoot`.
+- **Access Functions**: It consists of functions that provide access to the store's state values. These functions can be used to access or modify the state.
+- **State Notification**: When a value changes, it notifies all the descendant components that are subscribed to this state.
+
+### atom
+
+An `atom` is the smallest unit of state in Recoil that represents a piece of state.
+
+```js
+// @react
+type Statement = {
+  name: string;
+  amount: number;
+}
+
+const InitialStatements: Array<Statement> = [
+  { name: 'grocery', amount: -200 },
+  { name: 'salary ', amount: 4000 },
+  { name: 'presto', amount: -150 },
+]
+
+// declare Atom
+const statementAtom = atom<Array<Statement>>({
+  key: 'statements',
+  default: InitialStatements,
+})
+```
+
+An `atom` must have a key, which serves as a unique identifier to distinguish it from other `atom`. This key must be unique within the application, so special care should be taken when creating `atom` and `selector`. The `default` property specifies the initial value of the atom. To read and manage the `atom`'s value in a component and trigger re-rendering based on changes to this value, you can use the following `useRecoilValue` and `useRecoilState`.
+
+```js
+// @react
+const counterState = atom({
+  key: 'counterState',
+  default: 0,
+});
+
+function Counter() {
+  const [, setCount] = useRecoilState(counterState);
+
+  function handleButtonClick() {
+    setCount((count) => count + 1);
+  }
+
+  return (
+    <>
+      <button onClick={handleClick}>+</button>
+    </>
+  )
+}
+
+const isBiggerThan10 = selector({
+  key: 'above10State',
+  get: ({ get }) => {
+    return get(counterState) >= 10;
+  }
+});
+
+function Count() {
+  const count = useRecoilValue(coutnerState);
+  const biggerThan10 = useRecoilValue(isBiggerThan10);
+
+  return (
+    <>
+      <h3>{count}</h3>
+      <p>count is bigger than 10: {JSON.stringify(biggerThan10)}</p>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <RecoilRoot>
+      <Counter />
+      <Count />
+    </RecoilRoot>
+  )
+}
+```
+
+
+## Jotai
+
+```js
+// @react
+import { atom, useAtom, useAtomValue } from 'jotai';
+
+const counterState = atom(0);
+
+function Counter() {
+  const [, setCount] = useAtom(counterState);
+
+  funciton handleButtonClick() {
+    setCount((count) => count + 1);
+  }
+
+  return (
+    <>
+      <button onClick={handleClick}>+</button>
+    </>
+  )
+}
+
+const isBiggerThan10 = atom((get) => get(counterState) > 10);
+
+function Count() {
+  const count useAtomValue(counterState);
+  const biggerThan10 = useAtomValue(isBiggerThan10);
+
+  return (
+    <>
+      <h3>{count}</h3>
+      <p>count is bigger than 10: {JSON.stringify(biggerThan10)}</p>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <>
+      <Counter />
+      <Count />
+    </>
+  )
+}
+```
+
+
+## Zustand
+
+```js
+// @react
+import { createStore, useStore } from 'zustand';
+
+const counterStore = createStore((set) => ({
+  count: 1,
+  inc: () => set((state) => ({ count: state.count + 1})),
+  dec: () => set((state) => ({ count: state.count - 1})),
+}));
+
+function Counter() {
+  const { count, inc, dec } = useStore(counterStore);
+  return (
+    <div>
+      <span>{count}</span>
+      <button onClick={inc}>+</button>
+      <button onClick={dec}>-</button>
+    </div>
+  )
+}

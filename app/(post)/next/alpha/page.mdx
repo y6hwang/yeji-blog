@@ -1,0 +1,246 @@
+export let metadata = {
+  title: '/next/alpha',
+  description:
+    '',
+};
+
+
+Server actions are a feature that allows direct interaction with the server for data fetching and other operations at the function level, without the need to create a dedicated API. Unlike server components, server actions enable specific functions to be executed on the server, providing a distinct advantage by allowing diverse operations based on the function's execution. To enable server actions, you need to activate the experimental feature in the `next.config.js` file.
+
+```js
+// @noexec
+/** @type { import('next').NextConfig } */
+const nextConfig = {
+  experimental: {
+    serverActions: true,
+  }
+}
+
+module.exports = nextConfig;
+```
+
+To create a server action, you must first declare the directive `'use server';` either at the top of the file or within the function, similar to how you would declare a client component. Additionally, the function must be `async`. If it is not an `async` function, you will encounter an error saying "Server actions must be async functions."
+```js
+// @react
+async function serverAction() {
+  'use server';
+  // Code that directly accesses the server
+}
+
+// The contents of this file are all considered server actions.
+'use server';
+
+export async function myAction() {
+  // ...
+  // Code that directly accesses the server
+}
+```
+
+✅ TurboPack currently doesn’t fully support server actions, which is why running next dev --turbo may not work for those features. Server actions are indeed a relatively new feature, and TurboPack’s support for all aspects of Next.js is still evolving.
+
+
+## `<form />` Action
+
+`<form/>` is an HTML tag used for sending forms, and you can add the `action` prop to specify the URI that will handle the form data.
+
+```js
+// @react
+export default function Page() {
+  async function handleSubmit() {
+    'use server';
+
+    console.log('The operation is performed on the server, so there are no CORS issues.');
+
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+      method: 'post',
+      body: JSON.stringify({
+        title: 'foo',
+        body: 'bar',
+        userId: 1,
+      }),
+      headers: {
+        'content-type': 'application/json'
+      },
+    });
+
+    const result = await response.json();
+    console.log(result);
+  }
+  return (
+    <form action={handleSubmit}>
+      <button type='submit'>submit</button>
+    </form>
+  )
+}
+```
+
+In the example, `handleSubmit`, which is a server action, is passed as a prop to `form.action`. While the event that triggers `handleSubmit` occurs on the client, the actual execution of the function happens on the server.
+
+When a server action is executed, the client only sends the current route address and ACTION_ID, without executing anything else. The server then uses the received route address and ACTION_ID to locate and execute the required content directly on the server. To achieve this, content declared with `'use server';` is separated from the client at build time and moved to the server, ensuring that server actions are included only in the server-side execution and not in the client bundle.
+
+Server actions are particularly effective when they are linked with the form and the data being exposed.
+
+```js
+// @react
+// key value storage. package for server only
+import kv from '@vercel/kv';
+import { revalidatePath } from 'next/cache';
+
+interface Data {
+  name: string;
+  age: number;
+}
+
+export default async function Page({ params }: { params: { id: string } }) {
+  const key = `test:${params.id}`;
+  const data = await kv.get<Data>(key);
+
+  async function handleSubmit(formData: FormData) {
+    'use server';
+
+    const name = formData.get('name');
+    const age = formData.get('age');
+
+    await kv.set(key, {
+      name,
+      age,
+    });
+
+    revalidatePath(`/server-action/form/${params.id}`);
+  }
+
+  return (
+    <>
+      <h1>form with data</h1>
+      <h2>Info from server: {data?.name} {data?.age}</h2>
+
+      <form action={handleSubmit}>
+        <label htmlFor='name'>Name: </label>
+        <input
+          type='text'
+          id='name'
+          name='name'
+          defaultValue={data?.name}
+          placeholder='Enter your name.'
+        />
+
+        <label htmlFor='age'>Age: </label>
+        <input
+          type='text'
+          id='age'
+          name='age'
+          defaultValue={data?.age}
+          placeholder='Enter your age.'
+        />
+
+        <button type='submit'>submit</button>
+      </form>
+    </>
+  )
+}
+```
+
+The example demonstrates how to handle form data in a server action using `@vercel/kv`, a Redis storage accessible only from the server. First, the Page component, which is a server component, directly makes a server request to fetch data with a command like `const data = await kv.get<Data>(key)` and renders the JSX with this data. Then, a server action, `handleSubmit`, is added to the form tag, which updates the database (kv) with data based on formData. Once the update is successfully completed, the cache data of the specified path is refreshed using revalidatePath, causing the component to re-render.
+
+Similar to previous examples using forms, only the `ACTION_ID` and necessary data for execution are sent to the server without performing a direct update. Upon completion of the server action, the data object is updated with revalidatePath to fetch the latest data. This behavior can be more noticeable if there is a loading.jsx within the page.
+
+The key difference from index.php is that the entire process is carried out without page refreshes. After the initial page rendering on the server, the process of requesting data modification from the server with `handleSubmit` in the form and rendering the updated result is all done through data streaming without page refreshes. This allows for user interactions that indicate a loading state on the client while waiting for the updated result after a data modification request is made to the server.
+
+One more noteworthy aspect is the `revalidatePath` used in `handleSubmit`. This function invalidates the cache of the given path, immediately fetching new data from that URL. In Next.js, this is referred to as a server mutation. The functions that can be executed as server mutations are:
+- `redirect`: `import { redirect } from 'next/navigation'` to redirect to a specific URL.
+- `revalidatePath`: `import { revalidatePath } from 'next/cache'` to instantly update the cache of a specific URL.
+- `revalidateTag`: `import { revalidateTag } from 'next/cache'`. Cache tags can be added to fetch requests as follows:
+
+> ```fetch('https://localhost:8080/api/something', { next: { tags: [''] } });```
+
+> By adding tags in this way, various fetch requests can be distinguished by specific tag values, and using `revalidateTag` will reset all fetch requests that have the specific tag.
+
+By using forms in conjunction with server actions like this, data addition and modification requests based on forms can be handled more smoothly. Additionally, effectively resetting the cache managed by Next.js can provide users with a more seamless experience.
+
+
+## `<input />` submit & `<image />` formAction
+
+Similar to the `form.action` attribute, you can add server actions to `input` elements with `type="submit"` or `type="image"` using the `formAction` prop. The usage is the same as discussed earlier.
+
+
+## Integration with `startTransition`
+
+You can use server actions within the `startTransition` function provided by `useTransition`.
+
+```js
+// @react
+// server-action/index.ts
+'use server';
+
+import kv from '@vercel/kv';
+import { revalidatePath } from 'next/cache';
+
+export async function updateData(
+  id: string,
+  data: { name: string; age: number },
+) {
+  const key = `test:${id}`;
+
+  await kv.set(key, {
+    name: data.name,
+    age: data.age,
+  });
+
+  revalidatePath(`/server-action/form/${id}`);
+};
+
+// client-component.tsx
+'use client';
+
+import { useCallback, useTransition } from 'react';
+import { updateData } from '../../server-action';
+import { SkeletonBtn } from '../../app/styles/styled-components/components';
+
+export function ClientButtonComponent({ id }: { id: string }) {
+  const [isPending, startTransition] = useTransition();
+  
+  const handleClick = useCallback(() => {
+    startTransition(() => updateData(id, { name: 'default', age: 0 }));
+  }, [id]);
+
+  return isPending ? (
+    <SkeletonBtn />
+  ) : (
+    <button onClick={handleClick}>Reset</button>
+  );
+};
+```
+
+In the example code above, `startTransition`, the second element of the array returned by `useTransition`, is used to execute a server action. By using `useTransition` in this way, you can achieve the following benefits:
+
+- Implement the same logic without needing a page-level `loading.jsx`.
+- Use `isPending` to show a loading button and hide the reset button while the server action is being executed, allowing for component-level loading handling rather than page-level loading.
+- Handle server mutations such as `revalidatePath` seamlessly within the same process.
+
+This approach enhances user experience by providing more granular loading indicators and efficient handling of server actions.
+
+
+## Tasks Without Server Mutation
+
+If server mutations are needed, server actions must be used with `useTransition`. However, if no server mutation is involved, server actions can be directly included in the event handler.
+```js
+// @react
+export default function Page() {
+  async funtion handleClick() {
+    'use server';
+
+    // task without server mutation
+  };
+  return <button onClick={handleClick}>submit</button>
+}
+```
+
+
+## Points to Consider When Using Server Actions
+
+1. **Server Actions Cannot Be Defined Inside Client Components:** If you try to use a server action within a component declared with 'use client', an error will occur. Server actions should be defined in separate files marked with 'use server' and then imported into client components.
+
+2. **Importing Server Actions:** To use server actions in a client component, import them from a separate file where server actions are defined with 'use server'. This ensures the separation of client and server logic.
+
+3. **Passing Server Actions as Props:** In addition to importing server actions, you can pass them as props to client components. This is similar to how server components can render client components. Resources that need to run on the server should be separated at the file level.
+
