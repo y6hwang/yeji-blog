@@ -36,7 +36,7 @@ const MainPage = (): ReactElement | null => {
       bg: <div className='h-full'>
         {PortfolioBackground}
       </div>,
-      href: 'https://github.com',
+      href: 'https://github.com/y6hwang/yeji-blog',
       hrefMsg: 'Git',
       darkMode: false,
     },
@@ -177,7 +177,7 @@ const MainPage = (): ReactElement | null => {
         <section
           className="horizontal-pad flex flex-row items-center justify-between py-5">
             <div className='flex flex-row items-center justify-start gap-x-6 font-firacode'>
-              <Link href='/' rel="noopener noreferrer" target="_blank" >
+              <Link href='https://github.com/y6hwang/yeji-blog' rel="noopener noreferrer" target="_blank" >
                 <div className='flex flex-row items-center gap-2 underline'><FaGithub />Github</div>
               </Link>
               <Link href='/cv.pdf' rel="noopener noreferrer" target="_blank" >
