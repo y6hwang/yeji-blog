@@ -109,7 +109,7 @@ const MainPage = (): ReactElement | null => {
         <TopSection>
           <Headline>yeji hwang</Headline>
           <Copy>
-          Track progress, stay motivated, and share insights. It’s not just about the destination—it's about the process of continuous learning and growth.
+          Track progress, stay motivated, and share insights. It’s not just about the destination—it is about the process of continuous learning and growth.
           </Copy>
         </TopSection>
 
