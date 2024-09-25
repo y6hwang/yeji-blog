@@ -177,10 +177,10 @@ const MainPage = (): ReactElement | null => {
         <section
           className="horizontal-pad flex flex-row items-center justify-between py-5">
             <div className='flex flex-row items-center justify-start gap-x-6 font-firacode'>
-              <Link href='https://github.com/y6hwang/yeji-blog' rel="noopener noreferrer" target="_blank" >
+              <Link href='https://github.com/y6hwang' rel="noopener noreferrer" target="_blank" >
                 <div className='flex flex-row items-center gap-2 underline'><FaGithub />Github</div>
               </Link>
-              <Link href='/cv.pdf' rel="noopener noreferrer" target="_blank" >
+              <Link href='/resume_yeji_hwang.pdf' rel="noopener noreferrer" target="_blank" >
                 <div className='flex flex-row items-center gap-2 underline'><IoIosDocument />Resume</div>
               </Link>
             </div>
